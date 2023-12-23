@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+// FIXME: Check if memory allocations fail
+
 typedef enum {
     UNDEFINED,
     INTEGER_EXPRESSION,
@@ -30,11 +32,25 @@ typedef enum {
 typedef union _ExpressionValue ExpressionValue;
 typedef struct _Expression Expression;
 typedef struct _Variable Variable;
+typedef struct _Function Function;
 
 struct _Variable {
     Type type;
     const char *name;
     Expression *expression;
+};
+
+typedef struct {
+    const char *name;
+    Type type;
+} Argument;
+
+struct _Function {
+    const char *funcname;
+    Type return_type;
+    Expression *expression;
+    size_t arglen;
+    Argument args[];
 };
 
 union _ExpressionValue {
@@ -65,6 +81,33 @@ static inline const char *const Type_to_string(Type type) {
     default:
         return "UNDEFINED TYPE";
     }
+}
+
+static inline Function *make_function() {
+    return calloc(1, sizeof(Function) + sizeof(Argument));
+}
+
+static inline Function *set_function_name(Function *func, const char *funcname) {
+    func->funcname = funcname;
+    return func;
+}
+
+static inline Function *set_function_return_value(Function *func, Type type, Expression *exp) {
+    func->return_type = type;
+    func->expression = exp;
+    return func;
+}
+
+static inline Function *add_function_argument(Function *func, const char *argname, Type type) {
+    if (func->arglen == 0) {
+        func->args[0] = (Argument){.type = type, .name = argname};
+        func->arglen = 1;
+        return func;
+    }
+    func = realloc(func, sizeof(Function) + sizeof(Argument) * (func->arglen + 1));
+    func->args[func->arglen] = (Argument){.type = type, .name = argname};
+    func->arglen += 1;
+    return func;
 }
 
 static inline Variable *make_variable(const char *varname, Type type, Expression *exp) {
@@ -230,6 +273,21 @@ static inline void print_variable(Variable *var) {
     printf("VariableName: %s, VariableType: %s, Expression: ", Type_to_string(var->type), var->name);
     print_expression(var->expression);
 }
+
+static inline void print_arguments(Argument *args, size_t arglen) {
+    for (int i = 0; i < arglen; i++) {
+        printf("\tArgumentName: %s, ArgumentType: %s\n", args[i].name, Type_to_string(args[i].type));
+    }
+}
+
+static inline void print_function(Function *func) {
+    // FIXME: should not be static inlined?
+    printf("FunctionName: %s, FunctionReturnType: %s\n", func->funcname, Type_to_string(func->return_type));
+    print_arguments(func->args, func->arglen);
+    printf("\t\tExpression: ");
+    print_expression(func->expression);
+}
+
 
 static inline void clear_expression(Expression *exp) {
     // TODO: implement

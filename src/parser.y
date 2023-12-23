@@ -8,6 +8,7 @@
     char *identifier;
     struct _Expression *expression;
     struct _Variable *variable;
+    struct _Function *function;
 }
 
 %token KW_VALDEF 
@@ -33,9 +34,12 @@
 %token GREATER_EQUALS
 %token LESSER
 %token LESSER_EQUALS
+%token RETURN
 %token <integer> INTEGER
 %token <identifier> IDENTIFIER
 
+%type <function> function_definition;
+%type <function> function_definition_arguments;
 %type <variable> value_definition;
 %type <expression> expression;
 %type <expression> arithmetic_expression;
@@ -49,7 +53,17 @@
 %%
 input: %empty
      | input expression { print_expression($2); printf("\n"); }
-     | input value_definition { print_variable($2); printf("\n"); };
+     | input value_definition { print_variable($2); printf("\n"); }
+     | input function_definition { print_function($2); printf("\n"); };
+
+function_definition: KW_FUNCDEF IDENTIFIER function_definition_arguments RETURN KW_BOOL ASSIGN expression { $$ = set_function_return_value(set_function_name($3, $2), BOOL, $7); }
+                   | KW_FUNCDEF IDENTIFIER function_definition_arguments RETURN KW_INT ASSIGN expression { $$ = set_function_return_value(set_function_name($3, $2), INT, $7);};
+
+function_definition_arguments: IDENTIFIER KW_BOOL { $$ = add_function_argument(make_function(), $1, BOOL); }
+                             | IDENTIFIER KW_INT { $$ = add_function_argument(make_function(), $1, INT); }
+                             | IDENTIFIER KW_BOOL function_definition_arguments { $$ = add_function_argument($3, $1, BOOL); }
+                             | IDENTIFIER KW_INT function_definition_arguments { $$ = add_function_argument($3, $1, INT); }
+                             | OPEN_BRACKETS function_definition_arguments CLOSE_BRACKETS { $$ = $2; };
 
 value_definition: KW_VALDEF KW_BOOL IDENTIFIER ASSIGN expression { $$ = make_variable($3, BOOL, $5); }
                 | KW_VALDEF KW_INT IDENTIFIER ASSIGN expression { $$ = make_variable($3, INT, $5); };
