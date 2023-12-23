@@ -10,6 +10,9 @@
 "int"                     { return KW_INT; }
 "true"                    { return KW_TRUE; }
 "false"                   { return KW_FALSE; }
+"if"                      { return KW_IF; }
+"then"                    { return KW_THEN; }
+"else"                    { return KW_ELSE; }
 "+"                       { return PLUS; }
 "-"                       { return MINUS; }
 "*"                       { return MULTIPLY; }

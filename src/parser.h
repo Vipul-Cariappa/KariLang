@@ -22,6 +22,7 @@ typedef enum {
     GREATER_EQUALS_EXPRESSION,
     LESSER_EXPRESSION,
     LESSER_EQUALS_EXPRESSION,
+    IF_EXPRESSION,
 } ExpressionType;
 
 typedef enum {
@@ -64,6 +65,11 @@ union _ExpressionValue {
         Expression *fst;
         Expression *snd;
     } binary;
+    struct {
+        Expression *condition;
+        Expression *yes;
+        Expression *no;
+    } if_statement;
 };
 
 struct _Expression {
@@ -87,30 +93,35 @@ static inline Function *make_function() {
     return calloc(1, sizeof(Function) + sizeof(Argument));
 }
 
-static inline Function *set_function_name(Function *func, const char *funcname) {
+static inline Function *set_function_name(Function *func,
+                                          const char *funcname) {
     func->funcname = funcname;
     return func;
 }
 
-static inline Function *set_function_return_value(Function *func, Type type, Expression *exp) {
+static inline Function *set_function_return_value(Function *func, Type type,
+                                                  Expression *exp) {
     func->return_type = type;
     func->expression = exp;
     return func;
 }
 
-static inline Function *add_function_argument(Function *func, const char *argname, Type type) {
+static inline Function *add_function_argument(Function *func,
+                                              const char *argname, Type type) {
     if (func->arglen == 0) {
         func->args[0] = (Argument){.type = type, .name = argname};
         func->arglen = 1;
         return func;
     }
-    func = realloc(func, sizeof(Function) + sizeof(Argument) * (func->arglen + 1));
+    func =
+        realloc(func, sizeof(Function) + sizeof(Argument) * (func->arglen + 1));
     func->args[func->arglen] = (Argument){.type = type, .name = argname};
     func->arglen += 1;
     return func;
 }
 
-static inline Variable *make_variable(const char *varname, Type type, Expression *exp) {
+static inline Variable *make_variable(const char *varname, Type type,
+                                      Expression *exp) {
     Variable *result = malloc(sizeof(Variable));
     *result = (Variable){.type = type, .name = varname, .expression = exp};
     return result;
@@ -145,6 +156,16 @@ static inline Expression *make_binary_expression(Expression *fst,
 static inline Expression *make_unary_expression(Expression *fst) {
     Expression *result = malloc(sizeof(Expression));
     *result = (Expression){.value.unary.fst = fst};
+    return result;
+}
+
+static inline Expression *make_if_expression(Expression *condition,
+                                             Expression *yes, Expression *no) {
+    Expression *result = malloc(sizeof(Expression));
+    *result = (Expression){.type = IF_EXPRESSION,
+                           .value.if_statement.condition = condition,
+                           .value.if_statement.yes = yes,
+                           .value.if_statement.no = no};
     return result;
 }
 
@@ -263,6 +284,14 @@ static inline void print_expression(Expression *exp) {
         print_expression(value.binary.snd);
         printf(")");
         break;
+    case IF_EXPRESSION:
+        printf("Conditions: ");
+        print_expression(value.if_statement.condition);
+        printf("\n\tIfTrue: ");
+        print_expression(value.if_statement.yes);
+        printf("\n\tIfFalse: ");
+        print_expression(value.if_statement.no);
+        break;
     default:
         printf("Found Undefined Expression Type");
     }
@@ -270,24 +299,26 @@ static inline void print_expression(Expression *exp) {
 
 static inline void print_variable(Variable *var) {
     // FIXME: should not be static inlined?
-    printf("VariableName: %s, VariableType: %s, Expression: ", Type_to_string(var->type), var->name);
+    printf("VariableName: %s, VariableType: %s, Expression: ",
+           Type_to_string(var->type), var->name);
     print_expression(var->expression);
 }
 
 static inline void print_arguments(Argument *args, size_t arglen) {
-    for (int i = 0; i < arglen; i++) {
-        printf("\tArgumentName: %s, ArgumentType: %s\n", args[i].name, Type_to_string(args[i].type));
+    for (int i = arglen - 1; i >= 0; i--) {
+        printf("\tArgumentName: %s, ArgumentType: %s\n", args[i].name,
+               Type_to_string(args[i].type));
     }
 }
 
 static inline void print_function(Function *func) {
     // FIXME: should not be static inlined?
-    printf("FunctionName: %s, FunctionReturnType: %s\n", func->funcname, Type_to_string(func->return_type));
+    printf("FunctionName: %s, FunctionReturnType: %s\n", func->funcname,
+           Type_to_string(func->return_type));
     print_arguments(func->args, func->arglen);
     printf("\t\tExpression: ");
     print_expression(func->expression);
 }
-
 
 static inline void clear_expression(Expression *exp) {
     // TODO: implement

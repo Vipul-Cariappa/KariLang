@@ -17,6 +17,9 @@
 %token KW_INT
 %token KW_TRUE
 %token KW_FALSE
+%token KW_IF
+%token KW_THEN
+%token KW_ELSE
 %token ASSIGN
 %token PLUS
 %token MINUS
@@ -42,6 +45,7 @@
 %type <function> function_definition_arguments;
 %type <variable> value_definition;
 %type <expression> expression;
+%type <expression> if_expression;
 %type <expression> arithmetic_expression;
 %type <expression> boolean_expression;
 %type <expression> comparison_expression;
@@ -70,7 +74,11 @@ value_definition: KW_VALDEF KW_BOOL IDENTIFIER ASSIGN expression { $$ = make_var
 
 expression: boolean_expression { $$ = $1; }
           | arithmetic_expression { $$ = $1; }
-          | comparison_expression { $$ = $1; };
+          | comparison_expression { $$ = $1; }
+          | if_expression { $$ = $1; };
+
+if_expression: KW_IF boolean_expression KW_THEN expression KW_ELSE expression { $$ = make_if_expression($2, $4, $6); }
+             | KW_IF comparison_expression KW_THEN expression KW_ELSE expression { $$ = make_if_expression($2, $4, $6); };
 
 boolean_expression: KW_TRUE { $$ = make_boolean_expression(true); }
                   | KW_FALSE { $$ = make_boolean_expression(false); }
