@@ -46,13 +46,13 @@
 %type <variable> value_definition;
 %type <expression> expression;
 %type <expression> if_expression;
+/* %type <expression> function_call;
+%type <expression> function_call_arguments; */
 %type <expression> arithmetic_expression;
 %type <expression> boolean_expression;
 %type <expression> comparison_expression;
-%type <expression> binary_arithmetic_operator_call;
-%type <expression> unary_arithmetic_operator_call;
-%type <expression> unary_boolean_operator_call;
-%type <expression> binary_boolean_operator_call;
+%type <expression> binary_operator_call;
+%type <expression> unary_operator_call;
 
 %%
 input: %empty
@@ -75,49 +75,43 @@ function_definition_arguments: IDENTIFIER KW_BOOL { $$ = add_function_argument(m
 value_definition: KW_VALDEF KW_BOOL IDENTIFIER ASSIGN expression { $$ = make_variable($3, BOOL, $5); }
                 | KW_VALDEF KW_INT IDENTIFIER ASSIGN expression { $$ = make_variable($3, INT, $5); };
 
-expression: boolean_expression { $$ = $1; }
+expression: IDENTIFIER { $$ = make_variable_expression($1); }
+          | boolean_expression { $$ = $1; }
           | arithmetic_expression { $$ = $1; }
           | comparison_expression { $$ = $1; }
-          | if_expression { $$ = $1; };
+          | if_expression { $$ = $1; }
+          | OPEN_BRACKETS expression CLOSE_BRACKETS { $$ = $2; }
+          /* | function_call {$$ = $1; } */;
 
-if_expression: KW_IF boolean_expression KW_THEN expression KW_ELSE expression { $$ = make_if_expression($2, $4, $6); }
-             | KW_IF comparison_expression KW_THEN expression KW_ELSE expression { $$ = make_if_expression($2, $4, $6); };
+/* function_call: IDENTIFIER function_call_arguments { $$ = set_function_call_name_expression($2, $1); };
+
+function_call_arguments: expression { $$ = add_function_call_argument_expression(make_function_call_expression(), $1); }
+                       | expression function_call_arguments { $$ = add_function_call_argument_expression($2, $1); }; */
+
+if_expression: KW_IF expression KW_THEN expression KW_ELSE expression { $$ = make_if_expression($2, $4, $6); };
 
 boolean_expression: KW_TRUE { $$ = make_boolean_expression(true); }
                   | KW_FALSE { $$ = make_boolean_expression(false); }
-                  | IDENTIFIER { $$ = make_variable_expression($1); }
-                  | AND binary_boolean_operator_call { $$ = set_expression_type($2, AND_EXPRESSION); }
-                  | OR binary_boolean_operator_call { $$ = set_expression_type($2, OR_EXPRESSION); }
-                  | NOT unary_boolean_operator_call { $$ = set_expression_type($2, NOT_EXPRESSION); }
-                  | OPEN_BRACKETS boolean_expression CLOSE_BRACKETS { $$ = $2; };
+                  | AND binary_operator_call { $$ = set_expression_type($2, AND_EXPRESSION); }
+                  | OR binary_operator_call { $$ = set_expression_type($2, OR_EXPRESSION); }
+                  | NOT unary_operator_call { $$ = set_expression_type($2, NOT_EXPRESSION); };
 
-unary_boolean_operator_call: boolean_expression { $$ = make_unary_expression($1); }
-                           | comparison_expression { $$ = make_unary_expression($1); };
-
-binary_boolean_operator_call: boolean_expression boolean_expression { $$ = make_binary_expression($1, $2); }
-                            | boolean_expression comparison_expression { $$ = make_binary_expression($1, $2); };
-                            | comparison_expression boolean_expression { $$ = make_binary_expression($1, $2); };
-                            | comparison_expression comparison_expression { $$ = make_binary_expression($1, $2); };
-
-comparison_expression: EQUALS binary_arithmetic_operator_call { $$ = set_expression_type($2, EQUALS_EXPRESSION); }
-                     | NOT_EQUALS binary_arithmetic_operator_call { $$ = set_expression_type($2, NOT_EQUALS_EXPRESSION); }
-                     | GREATER binary_arithmetic_operator_call { $$ = set_expression_type($2, GREATER_EXPRESSION); }
-                     | GREATER_EQUALS binary_arithmetic_operator_call { $$ = set_expression_type($2, GREATER_EQUALS_EXPRESSION); }
-                     | LESSER binary_arithmetic_operator_call { $$ = set_expression_type($2, LESSER_EXPRESSION); }
-                     | LESSER_EQUALS binary_arithmetic_operator_call { $$ = set_expression_type($2, LESSER_EQUALS_EXPRESSION); };
-                     | OPEN_BRACKETS comparison_expression CLOSE_BRACKETS { $$ = $2; };
+comparison_expression: EQUALS binary_operator_call { $$ = set_expression_type($2, EQUALS_EXPRESSION); }
+                     | NOT_EQUALS binary_operator_call { $$ = set_expression_type($2, NOT_EQUALS_EXPRESSION); }
+                     | GREATER binary_operator_call { $$ = set_expression_type($2, GREATER_EXPRESSION); }
+                     | GREATER_EQUALS binary_operator_call { $$ = set_expression_type($2, GREATER_EQUALS_EXPRESSION); }
+                     | LESSER binary_operator_call { $$ = set_expression_type($2, LESSER_EXPRESSION); }
+                     | LESSER_EQUALS binary_operator_call { $$ = set_expression_type($2, LESSER_EQUALS_EXPRESSION); };
 
 arithmetic_expression: INTEGER { $$ = make_integer_expression($1); }
-                     | IDENTIFIER { $$ = make_variable_expression($1); }
-                     | PLUS binary_arithmetic_operator_call { $$ = set_expression_type($2, PLUS_EXPRESSION); }
-                     | MULTIPLY binary_arithmetic_operator_call { $$ = set_expression_type($2, MULTIPLY_EXPRESSION); }
-                     | DIVIDE binary_arithmetic_operator_call { $$ = set_expression_type($2, DIVIDE_EXPRESSION); }
-                     | MODULO binary_arithmetic_operator_call { $$ = set_expression_type($2, MODULO_EXPRESSION); }
-                     | MINUS unary_arithmetic_operator_call { $$ = set_expression_type($2, MINUS_EXPRESSION); }
-                     | OPEN_BRACKETS arithmetic_expression CLOSE_BRACKETS { $$ = $2; };
+                     | PLUS binary_operator_call { $$ = set_expression_type($2, PLUS_EXPRESSION); }
+                     | MULTIPLY binary_operator_call { $$ = set_expression_type($2, MULTIPLY_EXPRESSION); }
+                     | DIVIDE binary_operator_call { $$ = set_expression_type($2, DIVIDE_EXPRESSION); }
+                     | MODULO binary_operator_call { $$ = set_expression_type($2, MODULO_EXPRESSION); }
+                     | MINUS unary_operator_call { $$ = set_expression_type($2, MINUS_EXPRESSION); };
 
-unary_arithmetic_operator_call: arithmetic_expression { $$ = make_unary_expression($1); };
-binary_arithmetic_operator_call: arithmetic_expression arithmetic_expression { $$ = make_binary_expression($1, $2); };
+unary_operator_call: expression { $$ = make_unary_expression($1); };
+binary_operator_call: expression expression { $$ = make_binary_expression($1, $2); };
 
 %%
 
