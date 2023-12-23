@@ -64,10 +64,13 @@ function_definition: KW_FUNCDEF IDENTIFIER function_definition_arguments RETURN 
                    | KW_FUNCDEF IDENTIFIER function_definition_arguments RETURN KW_INT ASSIGN expression { $$ = set_function_return_value(set_function_name($3, $2), INT, $7);};
 
 function_definition_arguments: IDENTIFIER KW_BOOL { $$ = add_function_argument(make_function(), $1, BOOL); }
+                             | OPEN_BRACKETS IDENTIFIER KW_BOOL CLOSE_BRACKETS { $$ = add_function_argument(make_function(), $2, BOOL); }
                              | IDENTIFIER KW_INT { $$ = add_function_argument(make_function(), $1, INT); }
+                             | OPEN_BRACKETS IDENTIFIER KW_INT CLOSE_BRACKETS { $$ = add_function_argument(make_function(), $2, INT); }
                              | IDENTIFIER KW_BOOL function_definition_arguments { $$ = add_function_argument($3, $1, BOOL); }
+                             | OPEN_BRACKETS IDENTIFIER KW_BOOL CLOSE_BRACKETS function_definition_arguments { $$ = add_function_argument($5, $2, BOOL); }
                              | IDENTIFIER KW_INT function_definition_arguments { $$ = add_function_argument($3, $1, INT); }
-                             | OPEN_BRACKETS function_definition_arguments CLOSE_BRACKETS { $$ = $2; };
+                             | OPEN_BRACKETS IDENTIFIER KW_INT CLOSE_BRACKETS function_definition_arguments { $$ = add_function_argument($5, $2, INT); };
 
 value_definition: KW_VALDEF KW_BOOL IDENTIFIER ASSIGN expression { $$ = make_variable($3, BOOL, $5); }
                 | KW_VALDEF KW_INT IDENTIFIER ASSIGN expression { $$ = make_variable($3, INT, $5); };
