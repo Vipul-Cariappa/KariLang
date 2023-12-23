@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -23,6 +24,7 @@ typedef enum {
     LESSER_EXPRESSION,
     LESSER_EQUALS_EXPRESSION,
     IF_EXPRESSION,
+    FUNCTION_CALL_EXPRESSION,
 } ExpressionType;
 
 typedef enum {
@@ -70,6 +72,11 @@ union _ExpressionValue {
         Expression *yes;
         Expression *no;
     } if_statement;
+    struct {
+        const char *funcname;
+        size_t arglen;
+        Expression **args;
+    } function_call;
 };
 
 struct _Expression {
@@ -117,6 +124,39 @@ static inline Function *add_function_argument(Function *func,
         realloc(func, sizeof(Function) + sizeof(Argument) * (func->arglen + 1));
     func->args[func->arglen] = (Argument){.type = type, .name = argname};
     func->arglen += 1;
+    return func;
+}
+
+static inline Expression *make_function_call_expression() {
+    Expression *result = malloc(sizeof(Expression));
+    *result = (Expression){.type = FUNCTION_CALL_EXPRESSION,
+                           .value.function_call.args =
+                               calloc(1, sizeof(Expression *))};
+    return result;
+}
+
+static inline Expression *
+set_function_call_name_expression(Expression *func, const char *funcname) {
+    assert(func->type == FUNCTION_CALL_EXPRESSION);
+
+    func->value.function_call.funcname = funcname;
+    return func;
+}
+
+static inline Expression *
+add_function_call_argument_expression(Expression *func, Expression *exp) {
+    assert(func->type == FUNCTION_CALL_EXPRESSION);
+
+#define FUNC func->value.function_call
+    if (FUNC.arglen == 0) {
+        FUNC.args[0] = exp;
+        FUNC.arglen = 1;
+        return func;
+    }
+    FUNC.args = realloc(FUNC.args, sizeof(Expression *) * (FUNC.arglen + 1));
+    FUNC.args[FUNC.arglen] = exp;
+    FUNC.arglen += 1;
+#undef FUNC
     return func;
 }
 
@@ -291,6 +331,13 @@ static inline void print_expression(Expression *exp) {
         print_expression(value.if_statement.yes);
         printf("\n\tIfFalse: ");
         print_expression(value.if_statement.no);
+        break;
+    case FUNCTION_CALL_EXPRESSION:
+        printf("FunctionCallTo: %s", value.function_call.funcname);
+        for (int i = value.function_call.arglen - 1; i >= 0; i--) {
+            printf("\n\tArg: ");
+            print_expression(value.function_call.args[i]);
+        }
         break;
     default:
         printf("Found Undefined Expression Type");

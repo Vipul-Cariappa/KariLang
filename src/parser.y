@@ -46,8 +46,8 @@
 %type <variable> value_definition;
 %type <expression> expression;
 %type <expression> if_expression;
-/* %type <expression> function_call;
-%type <expression> function_call_arguments; */
+%type <expression> function_call;
+%type <expression> function_call_arguments;
 %type <expression> arithmetic_expression;
 %type <expression> boolean_expression;
 %type <expression> comparison_expression;
@@ -56,7 +56,6 @@
 
 %%
 input: %empty
-     | input expression { print_expression($2); printf("\n"); }
      | input value_definition { print_variable($2); printf("\n"); }
      | input function_definition { print_function($2); printf("\n"); };
 
@@ -80,13 +79,13 @@ expression: IDENTIFIER { $$ = make_variable_expression($1); }
           | arithmetic_expression { $$ = $1; }
           | comparison_expression { $$ = $1; }
           | if_expression { $$ = $1; }
-          | OPEN_BRACKETS expression CLOSE_BRACKETS { $$ = $2; }
-          /* | function_call {$$ = $1; } */;
+          | function_call {$$ = $1; }
+          | OPEN_BRACKETS expression CLOSE_BRACKETS { $$ = $2; };
 
-/* function_call: IDENTIFIER function_call_arguments { $$ = set_function_call_name_expression($2, $1); };
+function_call: IDENTIFIER OPEN_BRACKETS function_call_arguments CLOSE_BRACKETS { $$ = set_function_call_name_expression($3, $1); };
 
 function_call_arguments: expression { $$ = add_function_call_argument_expression(make_function_call_expression(), $1); }
-                       | expression function_call_arguments { $$ = add_function_call_argument_expression($2, $1); }; */
+                       | expression function_call_arguments { $$ = add_function_call_argument_expression($2, $1); };
 
 if_expression: KW_IF expression KW_THEN expression KW_ELSE expression { $$ = make_if_expression($2, $4, $6); };
 
