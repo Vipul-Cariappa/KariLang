@@ -22,18 +22,20 @@ typedef enum {
     LESSER_EQUALS_EXPRESSION,
 } ExpressionType;
 
-// typedef enum {
-//     BOOL,
-//     INT,
-// } Type;
-
-// typedef struct {
-//     Type type;
-//     const char *name;
-// } Variable;
+typedef enum {
+    BOOL,
+    INT,
+} Type;
 
 typedef union _ExpressionValue ExpressionValue;
 typedef struct _Expression Expression;
+typedef struct _Variable Variable;
+
+struct _Variable {
+    Type type;
+    const char *name;
+    Expression *expression;
+};
 
 union _ExpressionValue {
     int integer;
@@ -53,16 +55,23 @@ struct _Expression {
     ExpressionValue value;
 };
 
-// static inline const char *const Type_to_string(Type type) {
-//     switch (type) {
-//     case BOOL:
-//         return "bool";
-//     case INT:
-//         return "int";
-//     default:
-//         return "UNDEFINED TYPE";
-//     }
-// }
+static inline const char *const Type_to_string(Type type) {
+    // FIXME: should not be static inlined?
+    switch (type) {
+    case BOOL:
+        return "bool";
+    case INT:
+        return "int";
+    default:
+        return "UNDEFINED TYPE";
+    }
+}
+
+static inline Variable *make_variable(const char *varname, Type type, Expression *exp) {
+    Variable *result = malloc(sizeof(Variable));
+    *result = (Variable){.type = type, .name = varname, .expression = exp};
+    return result;
+}
 
 static inline Expression *make_integer_expression(int n) {
     Expression *result = malloc(sizeof(Expression));
@@ -216,6 +225,16 @@ static inline void print_expression(Expression *exp) {
     }
 }
 
+static inline void print_variable(Variable *var) {
+    // FIXME: should not be static inlined?
+    printf("VariableName: %s, VariableType: %s, Expression: ", Type_to_string(var->type), var->name);
+    print_expression(var->expression);
+}
+
 static inline void clear_expression(Expression *exp) {
+    // TODO: implement
+}
+
+static inline void clear_variable(Expression *exp) {
     // TODO: implement
 }

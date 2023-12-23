@@ -7,6 +7,7 @@
     int integer;
     char *identifier;
     struct _Expression *expression;
+    struct _Variable *variable;
 }
 
 %token KW_VALDEF 
@@ -32,7 +33,6 @@
 %token GREATER_EQUALS
 %token LESSER
 %token LESSER_EQUALS
-%token RETURN
 %token <integer> INTEGER
 %token <identifier> IDENTIFIER
 
@@ -46,7 +46,12 @@
 %type <expression> binary_boolean_operator_call;
 
 %%
-input: %empty | input expression { print_expression($2); printf("\n"); };
+input: %empty
+     | input expression { print_expression($2); printf("\n"); }
+     | input value_definition { print_variable($2); printf("\n"); };
+
+value_definition: KW_VALDEF KW_BOOL IDENTIFIER ASSIGN expression { $$ = make_variable($3, BOOL, $5); }
+                | KW_VALDEF KW_INT IDENTIFIER ASSIGN expression { $$ = make_variable($3, INT, $5); };
 
 expression: boolean_expression { $$ = $1; }
           | arithmetic_expression { $$ = $1; }
