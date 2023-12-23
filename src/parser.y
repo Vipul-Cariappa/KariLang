@@ -36,6 +36,7 @@
 %token <integer> INTEGER
 %token <identifier> IDENTIFIER
 
+%type <variable> value_definition;
 %type <expression> expression;
 %type <expression> arithmetic_expression;
 %type <expression> boolean_expression;
