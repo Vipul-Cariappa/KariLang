@@ -8,15 +8,26 @@
 "funcdef"                 { return KW_FUNCDEF; }
 "bool"                    { return KW_BOOL; }
 "int"                     { return KW_INT; }
-"="                       { return ASSIGN; }
+"true"                    { return KW_TRUE; }
+"false"                   { return KW_FALSE; }
 "+"                       { return PLUS; }
 "-"                       { return MINUS; }
 "*"                       { return MULTIPLY; }
 "/"                       { return DIVIDE; }
 "%"                       { return MODULO; }
+"&&"                      { return AND; }
+"||"                      { return OR; }
+"!"                       { return NOT; }
+"=="                      { return EQUALS; }
+"!="                      { return NOT_EQUALS; }
+">"                       { return GREATER; }
+"<"                       { return LESSER; }
+">="                      { return GREATER_EQUALS; }
+"<="                      { return LESSER_EQUALS; }
 "->"                      { return RETURN; }
 "("                       { return OPEN_BRACKETS; }
 ")"                       { return CLOSE_BRACKETS; }
+"="                       { return ASSIGN; }
 [0-9]*                    { yylval.integer = atoi(yytext); return INTEGER; }
 [a-zA-Z_][0-9a-zA-Z_]*    { yylval.identifier = strdup(yytext); return IDENTIFIER; }
 [ \n\t]                   { ; }

@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <ctype.h>
+#include <stdbool.h>
 
 extern FILE *yyin;
 extern int yylex(void);
