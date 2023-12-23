@@ -1,5 +1,6 @@
 %{
     #include "parser.tab.h"
+    #include <string.h>
 %}
 
 %%
@@ -14,8 +15,10 @@
 "/"                       { return DIVIDE; }
 "%"                       { return MODULO; }
 "->"                      { return RETURN; }
+"("                       { return OPEN_BRACKETS; }
+")"                       { return CLOSE_BRACKETS; }
 [0-9]*                    { yylval.integer = atoi(yytext); return INTEGER; }
-[a-zA-Z_][0-9a-zA-Z_]*    { yylval.identifier = yytext; return IDENTIFIER; }
+[a-zA-Z_][0-9a-zA-Z_]*    { yylval.identifier = strdup(yytext); return IDENTIFIER; }
 [ \n\t]                   { ; }
 .                         { fprintf(stderr, "Unexpected Token\n"); return YYUNDEF; }
 %%

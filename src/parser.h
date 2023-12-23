@@ -71,8 +71,14 @@ static inline Expression *make_binary_expression(Expression *fst, Expression *sn
     return result;
 }
 
-static inline Expression *set_expression_plus(Expression *exp) {
-    exp->type = PLUS_EXPRESSION;
+static inline Expression *make_unary_expression(Expression *fst) {
+    Expression *result = malloc(sizeof(Expression));
+    *result = (Expression){.value.unary.fst = fst};
+    return result;
+}
+
+static inline Expression *set_expression_type(Expression *exp, ExpressionType type) {
+    exp->type = type;
     return exp;
 }
 
@@ -96,10 +102,8 @@ static inline void print_expression(Expression *exp) {
             printf(")");
             break;
         case MINUS_EXPRESSION:
-            printf("(");
-            print_expression(value.binary.fst);
-            printf(" - ");
-            print_expression(value.binary.snd);
+            printf("(-");
+            print_expression(value.unary.fst);
             printf(")");
             break;
         case MULTIPLY_EXPRESSION:
