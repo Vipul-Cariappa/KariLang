@@ -1,6 +1,7 @@
 %{
     #include "parser.tab.h"
     #include <string.h>
+    #include <ctype.h>
 %}
 
 %%
