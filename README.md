@@ -38,6 +38,11 @@ Also, add support for higher order functions.
 
 ## To Compile
 
+You can download the compiled binary for Windows and Linux directly 
+from the [releases](https://github.com/Vipul-Cariappa/KariLang/releases) page.
+
+If you want to compile from source:
+
 Go to src directory
 ```bash
 cd src/
