@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdbool.h>
+#include "DS.h"
 
 extern FILE *yyin;
 extern int yylex(void);
@@ -101,9 +102,13 @@ typedef enum {
 struct _AST {
     AST_TYPE type;
     union {
-        Function func;
-        Variable var;
+        Function *func;
+        Variable *var;
     } value;
 };
 
 typedef struct _AST AST;
+
+DS_TABLE_DEC(ast, AST);
+
+extern ast_table_t *ast;

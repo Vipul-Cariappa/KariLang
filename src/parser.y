@@ -59,8 +59,8 @@
 
 %%
 input: %empty
-     | input value_definition { print_variable($2); printf("\n"); }
-     | input function_definition { print_function($2); printf("\n"); };
+     | input value_definition { ast_table_insert(ast, ($2)->name, (AST){.type = AST_VARIABLE, .value.var = $2}); }
+     | input function_definition { ast_table_insert(ast, ($2)->funcname, (AST){.type = AST_FUNCTION, .value.func = $2}); };
 
 function_definition: KW_FUNCDEF IDENTIFIER function_definition_arguments RETURN KW_BOOL ASSIGN expression { $$ = set_function_return_value(set_function_name($3, $2), BOOL, $7); }
                    | KW_FUNCDEF IDENTIFIER function_definition_arguments RETURN KW_INT ASSIGN expression { $$ = set_function_return_value(set_function_name($3, $2), INT, $7);};
