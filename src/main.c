@@ -1,6 +1,8 @@
 #include "common.h"
 #include <stdio.h>
 
+#include "parser.h" /* dont include this */
+
 IMPLEMENT_HASH_FUNCTION;
 DS_TABLE_DEF(ast, AST, NULL);
 
@@ -35,5 +37,24 @@ int main(int argc, char *argv[]) {
     /*  END  */
 
     fclose(file);
+
+    /* Sematic Analysis */
+    printf("Sematic Analysis\n");
+    char *key;
+    _ast_table_iter(ast);
+    AST *tree = _ast_table_iter_next(ast, &key);
+    for (size_t i = 0; i++ < ast_table_size(ast);
+         tree = _ast_table_iter_next(ast, &key)) {
+        switch (tree->type) {
+        case AST_FUNCTION:
+            print_function(tree->value.func);
+            break;
+        case AST_VARIABLE:
+            print_variable(tree->value.var);
+            break;
+        }
+        printf("\n");
+    }
+
     return 0;
 }

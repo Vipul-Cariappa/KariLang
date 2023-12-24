@@ -355,15 +355,15 @@
         if ((tb->current_iter_list_node) &&                                    \
             (tb->current_iter_list_node->next)) {                              \
             tb->current_iter_list_node = tb->current_iter_list_node->next;     \
-            *key = tb->current_iter_list_node->item_pair.key;                  \
+            *key = (char *)tb->current_iter_list_node->item_pair.key;          \
             return &(tb->current_iter_list_node->item_pair.value);             \
         }                                                                      \
                                                                                \
-        while (++tb->current_iter_array_index < tb->count) {                   \
+        while (++tb->current_iter_array_index < tb->array_length) {            \
             if (tb->table_list[tb->current_iter_array_index].item_pair.key) {  \
                 tb->current_iter_list_node =                                   \
                     tb->table_list + tb->current_iter_array_index;             \
-                *key = tb->table_list[tb->current_iter_array_index]            \
+                *key = (char *)tb->table_list[tb->current_iter_array_index]    \
                            .item_pair.key;                                     \
                 return &(tb->table_list[tb->current_iter_array_index]          \
                              .item_pair.value);                                \
@@ -460,9 +460,3 @@
     bool name##_table_clear(name##_table_t *tb) { /* TODO: Implement */        \
         return true;                                                           \
     }
-
-#define DS_TABLE_PTR_FOREACH(tb, key, value)                                   \
-    _integer_table_iter(tb);                                                   \
-    (value) = _integer_table_iter_next(tb, (key));                             \
-    for (size_t _i = 0; _i++ < integer_table_size(tb);                         \
-         (value) = _integer_table_iter_next(tb, (key)))
