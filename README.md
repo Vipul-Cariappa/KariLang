@@ -16,6 +16,12 @@ funcdef fib n int -> int =
 funcdef main n int -> int = fib(n)
 ```
 
+To Run
+
+```bash
+KariLang ./program.txt 15
+```
+
 ## About the language
 
 It has only 2 data types, `int` and `bool`.
@@ -49,5 +55,5 @@ flex ./lexer.l
 
 Compiler the language
 ```bash
-cc -Wall -g ./main.c ./semantics.c ./interpreter.c ./lex.yy.c ./parser.tab.c
+cc -Wall -g ./main.c ./semantics.c ./interpreter.c ./lex.yy.c ./parser.tab.c -o ./KariLang
 ```
