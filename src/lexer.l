@@ -14,6 +14,7 @@
 "if"                      { return KW_IF; }
 "then"                    { return KW_THEN; }
 "else"                    { return KW_ELSE; }
+","                       { return COMMA; }
 "+"                       { return PLUS; }
 "-"                       { return MINUS; }
 "*"                       { return MULTIPLY; }

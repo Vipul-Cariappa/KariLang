@@ -1,10 +1,9 @@
+#include "common.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "common.h"
 
 // FIXME: Check if memory allocations fail
-
 
 static inline const char *const Type_to_string(Type type) {
     // FIXME: should not be static inlined?
@@ -108,16 +107,18 @@ static inline Expression *make_boolean_expression(bool b) {
     return result;
 }
 
-static inline Expression *make_binary_expression(Expression *fst,
-                                                 Expression *snd) {
+static inline Expression *
+make_binary_expression(Expression *fst, Expression *snd, ExpressionType type) {
     Expression *result = malloc(sizeof(Expression));
-    *result = (Expression){.value.binary.fst = fst, .value.binary.snd = snd};
+    *result = (Expression){
+        .type = type, .value.binary.fst = fst, .value.binary.snd = snd};
     return result;
 }
 
-static inline Expression *make_unary_expression(Expression *fst) {
+static inline Expression *make_unary_expression(Expression *fst,
+                                                ExpressionType type) {
     Expression *result = malloc(sizeof(Expression));
-    *result = (Expression){.value.unary.fst = fst};
+    *result = (Expression){.type = type, .value.unary.fst = fst};
     return result;
 }
 
@@ -129,12 +130,6 @@ static inline Expression *make_if_expression(Expression *condition,
                            .value.if_statement.yes = yes,
                            .value.if_statement.no = no};
     return result;
-}
-
-static inline Expression *set_expression_type(Expression *exp,
-                                              ExpressionType type) {
-    exp->type = type;
-    return exp;
 }
 
 static inline void print_expression(Expression *exp) {
@@ -268,8 +263,8 @@ static inline void print_expression(Expression *exp) {
 
 static inline void print_variable(Variable *var) {
     // FIXME: should not be static inlined?
-    printf("VariableName: %s, VariableType: %s, Expression: ",
-           Type_to_string(var->type), var->name);
+    printf("VariableName: %s, VariableType: %s, Expression: ", var->name,
+           Type_to_string(var->type));
     print_expression(var->expression);
 }
 
