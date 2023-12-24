@@ -47,6 +47,7 @@
 %type <expression> expression;
 %type <expression> function_call_arguments;
 
+%precedence KW_ELSE
 %left AND OR
 %left EQUALS NOT_EQUALS GREATER GREATER_EQUALS LESSER LESSER_EQUALS
 %left PLUS
@@ -54,7 +55,6 @@
 %left MODULO
 %precedence MINUS
 %precedence NOT
-%precedence KW_ELSE
 
 %%
 input: %empty

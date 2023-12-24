@@ -37,6 +37,9 @@ int main(int argc, char *argv[]) {
     fclose(file);
 
     /* Sematic Analysis */
+    if (!verify_semantics()) {
+        fprintf(stderr, "Semantic Error:\n%s\n", semantic_error_msg);
+    }
     print_ast_table(ast);
 
     return 0;

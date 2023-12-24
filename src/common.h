@@ -89,6 +89,7 @@ union _ExpressionValue {
 };
 
 struct _Expression {
+    // Type result_type;
     ExpressionType type;
     ExpressionValue value;
 };
@@ -102,6 +103,7 @@ typedef enum {
 
 struct _AST {
     AST_TYPE type;
+    bool semantically_correct;
     union {
         Function *func;
         Variable *var;
@@ -113,6 +115,9 @@ typedef struct _AST AST;
 DS_TABLE_DEC(ast, AST);
 
 extern ast_table_t *ast;
+
+extern char semantic_error_msg[];
+bool verify_semantics();
 
 // FIXME: Check if memory allocations fail
 
