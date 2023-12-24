@@ -37,8 +37,8 @@
     TYPE name##_table_get(name##_table_t *tb, const char *key);                \
     TYPE *name##_table_get_ptr(name##_table_t *tb, const char *key);           \
     size_t name##_table_size(name##_table_t *tb);                              \
-    TYPE *_##name##_table_iter_next(name##_table_t *tb, char **key);           \
-    void _##name##_table_iter(name##_table_t *tb);                             \
+    TYPE *name##_table_iter_next(name##_table_t *tb, char **key);              \
+    void name##_table_iter(name##_table_t *tb);                                \
     bool name##_table_clear(name##_table_t *tb);
 
 #define DS_ARRAY_DEF(name, TYPE, delFunc)                                      \
@@ -346,12 +346,12 @@
         return tb;                                                             \
     }                                                                          \
                                                                                \
-    void _##name##_table_iter(name##_table_t *tb) {                            \
+    void name##_table_iter(name##_table_t *tb) {                               \
         tb->current_iter_array_index = -1;                                     \
         tb->current_iter_list_node = NULL;                                     \
     }                                                                          \
                                                                                \
-    TYPE *_##name##_table_iter_next(name##_table_t *tb, char **key) {          \
+    TYPE *name##_table_iter_next(name##_table_t *tb, char **key) {             \
         if ((tb->current_iter_list_node) &&                                    \
             (tb->current_iter_list_node->next)) {                              \
             tb->current_iter_list_node = tb->current_iter_list_node->next;     \
