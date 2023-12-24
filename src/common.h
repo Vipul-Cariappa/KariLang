@@ -119,6 +119,9 @@ extern ast_table_t *ast;
 extern char semantic_error_msg[];
 bool verify_semantics();
 
+extern char runtime_error_msg[];
+bool interpret(int input, int *output);
+
 // FIXME: Check if memory allocations fail
 
 static inline const char *const Type_to_string(Type type) {

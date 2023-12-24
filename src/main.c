@@ -7,8 +7,8 @@ DS_TABLE_DEF(ast, AST, NULL);
 ast_table_t *ast;
 
 int main(int argc, char *argv[]) {
-    if (argc != 2) {
-        fprintf(stderr, "File to parse required\n");
+    if (argc != 3) {
+        fprintf(stderr, "File and input required to execute the program\n");
         return 1;
     }
 
@@ -38,9 +38,19 @@ int main(int argc, char *argv[]) {
 
     /* Sematic Analysis */
     if (!verify_semantics()) {
-        fprintf(stderr, "Semantic Error:\n%s\n", semantic_error_msg);
+        fprintf(stderr, "\n\nSemantic Error:\n%s\n", semantic_error_msg);
+        return 1;
     }
-    print_ast_table(ast);
+
+    /* Interpreting */
+    int output;
+    int input = atoi(argv[2]);
+    if (!interpret(input, &output)) {
+        fprintf(stderr, "\n\nRuntime Error:\n%s\n", runtime_error_msg);
+        return 1;
+    }
+
+    printf("Input: %d\nOutput: %d\n", input, output);
 
     return 0;
 }

@@ -8,13 +8,13 @@
 typedef struct {
     size_t arglen;
     Argument *args;
-} context;
+} Context;
 
 bool verify_function_semantics(Function *func);
 bool verify_variable_semantics(Variable *var);
 bool verify_function_call_arguments(Function *func, Expression **args,
-                                    size_t arglen, context *cxt);
-bool verify_expression_type(Expression *exp, Type type, context *cxt);
+                                    size_t arglen, Context *cxt);
+bool verify_expression_type(Expression *exp, Type type, Context *cxt);
 bool verify_ast_semantics(AST *tree);
 
 char semantic_error_msg[ERROR_MSG_LEN] = {0};
@@ -57,7 +57,7 @@ bool verify_ast_semantics(AST *tree) {
 }
 
 bool verify_function_call_arguments(Function *func, Expression **args,
-                                    size_t arglen, context *cxt) {
+                                    size_t arglen, Context *cxt) {
     if (func->arglen != arglen)
         return false;
 
@@ -68,7 +68,7 @@ bool verify_function_call_arguments(Function *func, Expression **args,
     return true;
 }
 
-bool verify_expression_type(Expression *exp, Type type, context *cxt) {
+bool verify_expression_type(Expression *exp, Type type, Context *cxt) {
     switch (exp->type) {
     case INTEGER_EXPRESSION:
         if (type == INT)
@@ -186,7 +186,7 @@ bool verify_expression_type(Expression *exp, Type type, context *cxt) {
 }
 
 bool verify_function_semantics(Function *func) {
-    context cxt = {.arglen = func->arglen, .args = func->args};
+    Context cxt = {.arglen = func->arglen, .args = func->args};
     return verify_expression_type(func->expression, func->return_type, &cxt);
 }
 
