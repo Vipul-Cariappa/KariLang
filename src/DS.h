@@ -37,6 +37,8 @@
     TYPE name##_table_get(name##_table_t *tb, const char *key);                \
     TYPE *name##_table_get_ptr(name##_table_t *tb, const char *key);           \
     size_t name##_table_size(name##_table_t *tb);                              \
+    TYPE *_##name##_table_iter_next(name##_table_t *tb, char **key);           \
+    void _##name##_table_iter(name##_table_t *tb);                             \
     bool name##_table_clear(name##_table_t *tb);
 
 #define DS_ARRAY_DEF(name, TYPE, delFunc)                                      \
@@ -320,6 +322,9 @@
     struct _##name##_table_t {                                                 \
         size_t count;                                                          \
         size_t array_length;                                                   \
+        size_t current_iter_array_index; /* Used for iteration */              \
+        _##name##_hash_table_list_node                                         \
+            *current_iter_list_node; /* Used for iteration */                  \
         _##name##_hash_table_list_node *table_list;                            \
     };                                                                         \
                                                                                \
@@ -339,6 +344,32 @@
                                                                                \
         tb->array_length = size;                                               \
         return tb;                                                             \
+    }                                                                          \
+                                                                               \
+    void _##name##_table_iter(name##_table_t *tb) {                            \
+        tb->current_iter_array_index = -1;                                     \
+        tb->current_iter_list_node = NULL;                                     \
+    }                                                                          \
+                                                                               \
+    TYPE *_##name##_table_iter_next(name##_table_t *tb, char **key) {          \
+        if ((tb->current_iter_list_node) &&                                    \
+            (tb->current_iter_list_node->next)) {                              \
+            tb->current_iter_list_node = tb->current_iter_list_node->next;     \
+            *key = tb->current_iter_list_node->item_pair.key;                  \
+            return &(tb->current_iter_list_node->item_pair.value);             \
+        }                                                                      \
+                                                                               \
+        while (++tb->current_iter_array_index < tb->count) {                   \
+            if (tb->table_list[tb->current_iter_array_index].item_pair.key) {  \
+                tb->current_iter_list_node =                                   \
+                    tb->table_list + tb->current_iter_array_index;             \
+                *key = tb->table_list[tb->current_iter_array_index]            \
+                           .item_pair.key;                                     \
+                return &(tb->table_list[tb->current_iter_array_index]          \
+                             .item_pair.value);                                \
+            }                                                                  \
+        }                                                                      \
+        return NULL;                                                           \
     }                                                                          \
                                                                                \
     bool name##_table_insert(name##_table_t *tb, const char *key,              \
@@ -430,4 +461,8 @@
         return true;                                                           \
     }
 
-// TODO: implement iterator for hash function
+#define DS_TABLE_PTR_FOREACH(tb, key, value)                                   \
+    _integer_table_iter(tb);                                                   \
+    (value) = _integer_table_iter_next(tb, (key));                             \
+    for (size_t _i = 0; _i++ < integer_table_size(tb);                         \
+         (value) = _integer_table_iter_next(tb, (key)))
