@@ -23,6 +23,8 @@
 "if"                      { HANDLE_COLUMN; return KW_IF; }
 "then"                    { HANDLE_COLUMN; return KW_THEN; }
 "else"                    { HANDLE_COLUMN; return KW_ELSE; }
+";"                       { HANDLE_COLUMN; return STATEMENT_END; }
+":"                       { HANDLE_COLUMN; return TYPE_OF; }
 ","                       { HANDLE_COLUMN; return COMMA; }
 "+"                       { HANDLE_COLUMN; return PLUS; }
 "-"                       { HANDLE_COLUMN; return MINUS; }
