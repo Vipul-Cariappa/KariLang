@@ -48,5 +48,6 @@
 [a-zA-Z_][0-9a-zA-Z_]*    { HANDLE_COLUMN; yylval.identifier = strdup(yytext); return IDENTIFIER; }
 [ \t]+                    { HANDLE_COLUMN; }
 [\n]                      { HANDLE_COLUMN; next_column = 1; }
+\/\/.+                    { ; }
 .                         { HANDLE_COLUMN; return YYUNDEF; }
 %%
