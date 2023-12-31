@@ -1,5 +1,6 @@
 %{
     #include "common.h"
+    #include "cli_interpreter.h"
 
     #define ERROR_MSG_LEN 500
     char syntax_error_msg[ERROR_MSG_LEN];
@@ -63,8 +64,31 @@
 
 %%
 input: %empty
-     | input value_definition { (ast_table_insert(ast, ($2)->name, (AST){.type = AST_VARIABLE, .value.var = $2})); }
-     | input function_definition { (ast_table_insert(ast, ($2)->funcname, (AST){.type = AST_FUNCTION, .value.func = $2})); };
+     | input expression STATEMENT_END {
+            if (cli_interpretation_mode) {
+                cli_interpret((AST){.type = AST_EXPRESSION, .value.exp = $2});
+            }
+            else {
+                yyerror("Standalone expression are not allowed\n");
+                // ???: Don't exit here
+                return 1;
+            }
+        }
+     | input value_definition { 
+            if (cli_interpretation_mode) {
+                cli_interpret((AST){.type = AST_VARIABLE, .value.var = $2});
+            }
+            else {
+                assert(ast_table_insert(ast, ($2)->name, (AST){.type = AST_VARIABLE, .value.var = $2}));
+            }
+        }
+     | input function_definition { 
+            if (cli_interpretation_mode) {
+                cli_interpret((AST){.type = AST_FUNCTION, .value.func = $2});
+            } else {
+                assert(ast_table_insert(ast, ($2)->funcname, (AST){.type = AST_FUNCTION, .value.func = $2})); 
+            }
+        };
 
 function_definition: KW_FUNCDEF IDENTIFIER OPEN_BRACKETS function_definition_arguments CLOSE_BRACKETS RETURN KW_BOOL ASSIGN expression STATEMENT_END { $$ = set_function_return_value(set_function_name($4, $2), BOOL, $9); }
                    | KW_FUNCDEF IDENTIFIER OPEN_BRACKETS function_definition_arguments CLOSE_BRACKETS RETURN KW_INT ASSIGN expression STATEMENT_END { $$ = set_function_return_value(set_function_name($4, $2), INT, $9);};
@@ -105,5 +129,5 @@ function_call_arguments: expression { $$ = add_function_call_argument_expression
 
 void yyerror(char const *str) {
     snprintf(syntax_error_msg, ERROR_MSG_LEN,
-              "ERROR: %s in %s:%d:%d\n", str, filename, yylineno, column);
+              "ERROR: %s in %s:%d:%d", str, filename, yylineno, column);
 }

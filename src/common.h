@@ -14,7 +14,9 @@ extern void yyerror(char const *s);
 extern int yylineno;
 extern int column;
 extern char *yytext;
-extern char *filename;
+extern const char *filename;
+
+extern bool cli_interpretation_mode;
 
 extern char syntax_error_msg[];
 
@@ -104,6 +106,7 @@ struct _Expression {
 typedef enum {
     AST_VARIABLE,
     AST_FUNCTION,
+    AST_EXPRESSION,
 } AST_TYPE;
 
 struct _AST {
@@ -112,6 +115,7 @@ struct _AST {
     union {
         Function *func;
         Variable *var;
+        Expression *exp;
     } value;
 };
 
@@ -126,6 +130,12 @@ bool verify_semantics();
 
 extern char runtime_error_msg[];
 bool interpret(int input, int *output);
+
+DS_TABLE_DEC(integer, int);
+DS_TABLE_DEC(boolean, bool);
+
+extern integer_table_t *globalIntegers;
+extern boolean_table_t *globalBooleans;
 
 // FIXME: Check if memory allocations fail
 
@@ -422,6 +432,9 @@ static inline void print_ast_table(ast_table_t *ast) {
         case AST_VARIABLE:
             print_variable(tree->value.var);
             break;
+        case AST_EXPRESSION:
+            // TODO: print expression
+            break;
         }
         printf("\n");
     }
@@ -431,6 +444,17 @@ static inline void clear_expression(Expression *exp) {
     // TODO: implement
 }
 
-static inline void clear_variable(Expression *exp) {
+static inline void clear_variable(Variable *var) {
     // TODO: implement
 }
+
+static inline void clear_function(Function *func) {
+    // TODO: implement
+}
+
+static inline void clear_ast(AST tree) {
+    // TODO: implement
+}
+
+static inline void clean_integer(int x) {}
+static inline void clean_boolean(bool x) {}

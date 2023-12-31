@@ -1,19 +1,56 @@
 #include "common.h"
 #include <stdio.h>
+#include <string.h>
+
+void* yy_scan_string(const char *);
 
 IMPLEMENT_HASH_FUNCTION;
-DS_TABLE_DEF(ast, AST, NULL);
+DS_TABLE_DEF(ast, AST, clear_ast);
 
 ast_table_t *ast;
-char *filename;
+const char *filename;
+
+bool cli_interpretation_mode = false;
+int interactive_interpretation();
+int file_interpretation(const char *file_name, int input);
 
 int main(int argc, char *argv[]) {
+    if (argc == 1) {
+        return interactive_interpretation();
+    }
+
     if (argc != 3) {
         fprintf(stderr, "File and input required to execute the program\n");
         return 1;
     }
 
-    filename = argv[1];
+    return file_interpretation(argv[1], atoi(argv[2]));
+}
+
+int interactive_interpretation() {
+    cli_interpretation_mode = true;
+    ast = ast_table_new(100);
+    globalBooleans = boolean_table_new(100);
+    globalIntegers = integer_table_new(100);
+
+    char string[100];
+    while (true) {
+        printf(">>> ");
+        if (!fgets(string, 100, stdin)) {
+            fprintf(stderr, "Error while getting input\n");
+            return 1;
+        }
+        if ((!strcmp("exit\n", string)) || (!strcmp("exit;\n", string))) {
+            return 0;
+        }
+
+        yy_scan_string(string);
+        yyparse();
+    }
+}
+
+int file_interpretation(const char *file_name, int input) {
+    filename = file_name;
 
     FILE *file = fopen(filename, "r");
     if (file == NULL) {
@@ -21,37 +58,29 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    yyin = file;
-
-    /* BEGIN */
-    // int name_token, value_token = 0;
-    // while (0 != (name_token = yylex())) {
-    //     printf("NameToken: %d, ValueToken: %d, String: %s\n", name_token,
-    //     value_token, yytext);
-    // }
-
+    /* Initialization of Variables and Functions Table */
     ast = ast_table_new(100);
 
+    /* Parsing */
+    yyin = file;
     if (yyparse()) {
         fclose(file);
-        fprintf(stderr, "%s", syntax_error_msg);
+        fprintf(stderr, "%s\n", syntax_error_msg);
         return 1;
     }
-    /*  END  */
 
     fclose(file);
 
     /* Sematic Analysis */
     if (!verify_semantics()) {
-        fprintf(stderr, "\n\nSemantic Error:\n%s\n", semantic_error_msg);
+        fprintf(stderr, "Semantic Error: %s\n", semantic_error_msg);
         return 1;
     }
 
     /* Interpreting */
     int output;
-    int input = atoi(argv[2]);
     if (!interpret(input, &output)) {
-        fprintf(stderr, "\n\nRuntime Error:\n%s\n", runtime_error_msg);
+        fprintf(stderr, "Runtime Error: %s\n", runtime_error_msg);
         return 1;
     }
 

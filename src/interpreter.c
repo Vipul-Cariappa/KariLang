@@ -26,11 +26,8 @@ typedef struct {
 
 size_t hash_function(const char *str);
 
-DS_TABLE_DEC(integer, int);
-DS_TABLE_DEC(boolean, bool);
-
-DS_TABLE_DEF(integer, int, NULL);
-DS_TABLE_DEF(boolean, bool, NULL);
+DS_TABLE_DEF(integer, int, clean_integer);
+DS_TABLE_DEF(boolean, bool, clean_boolean);
 
 ExpressionResult evaluate_expression(Expression *exp, Context *cxt);
 ExpressionResult execute_function_call(Function *func, Expression **args,
@@ -90,6 +87,11 @@ bool interpret(int input, int *output) {
                     return false;
                 }
             }
+            break;
+        case AST_EXPRESSION:
+            snprintf(syntax_error_msg, ERROR_MSG_LEN, "Internal Error");
+            // TODO: clean memory
+            return false;
         }
     }
 
