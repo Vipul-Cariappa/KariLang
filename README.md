@@ -5,15 +5,25 @@ Toy Functional Programming Language
 ## Example Program
 
 ```text
-valdef int x = 10
+valdef zero: int = 0;
+valdef one: int = 1;
+valdef two: int = one + one;
 
-funcdef fib n int -> int = 
-    if n < 2 then 
+funcdef sum(n: int) -> int = _sum(zero, n);
+
+funcdef _sum(c: int, n: int) -> int =
+    if n == zero then
+        c
+    else
+        _sum(c + n, n + -1);
+
+funcdef fib(n: int) -> int = 
+    if n < two then
         n 
-    else 
-        fib(n + -1) + fib(n + -2)
+    else
+        fib(n + -1) + fib(n + -two);
 
-funcdef main n int -> int = fib(n)
+funcdef main(n: int) -> int = fib(n);
 ```
 
 To Run

@@ -5,6 +5,7 @@ IMPLEMENT_HASH_FUNCTION;
 DS_TABLE_DEF(ast, AST, NULL);
 
 ast_table_t *ast;
+char *filename;
 
 int main(int argc, char *argv[]) {
     if (argc != 3) {
@@ -12,7 +13,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    char *filename = argv[1];
+    filename = argv[1];
 
     FILE *file = fopen(filename, "r");
     if (file == NULL) {
@@ -31,7 +32,11 @@ int main(int argc, char *argv[]) {
 
     ast = ast_table_new(100);
 
-    yyparse();
+    if (yyparse()) {
+        fclose(file);
+        fprintf(stderr, "%s", syntax_error_msg);
+        return 1;
+    }
     /*  END  */
 
     fclose(file);
