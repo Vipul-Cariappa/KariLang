@@ -38,13 +38,15 @@ static inline bool cli_interpret(AST tree) {
             printf("%d\n", evaluate_expression(tree.value.exp, NULL).integer);
             return true;
         }
-        fprintf(stderr, "Error While Evaluation Expression\n");
+
+        fprintf(stderr,
+                "Error While Evaluation Expression\nSemantic Error: %s\n",
+                semantic_error_msg);
         return false;
     }
 
     if (!verify_ast_semantics(&tree)) {
-        fprintf(stderr, "Semantic Error\n");
-        errno = 0;
+        fprintf(stderr, "Semantic Error: %s\n", semantic_error_msg);
         return false;
     }
 
@@ -53,8 +55,7 @@ static inline bool cli_interpret(AST tree) {
             assert(integer_table_insert(
                 globalIntegers, tree.value.var->name,
                 evaluate_expression(tree.value.var->expression, NULL).integer));
-        }
-        else {
+        } else {
             assert(boolean_table_insert(
                 globalBooleans, tree.value.var->name,
                 evaluate_expression(tree.value.var->expression, NULL).boolean));

@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
 
     if (yyparse()) {
         fclose(file);
-        fprintf(stderr, "%s", syntax_error_msg);
+        fprintf(stderr, "%s\n", syntax_error_msg);
         return 1;
     }
     /*  END  */
@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
 
     /* Sematic Analysis */
     if (!verify_semantics()) {
-        fprintf(stderr, "\n\nSemantic Error:\n%s\n", semantic_error_msg);
+        fprintf(stderr, "Semantic Error: %s\n", semantic_error_msg);
         return 1;
     }
 
@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
     int output;
     int input = atoi(argv[2]);
     if (!interpret(input, &output)) {
-        fprintf(stderr, "\n\nRuntime Error:\n%s\n", runtime_error_msg);
+        fprintf(stderr, "Runtime Error: %s\n", runtime_error_msg);
         return 1;
     }
 

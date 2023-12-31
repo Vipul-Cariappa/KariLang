@@ -129,5 +129,5 @@ function_call_arguments: expression { $$ = add_function_call_argument_expression
 
 void yyerror(char const *str) {
     snprintf(syntax_error_msg, ERROR_MSG_LEN,
-              "ERROR: %s in %s:%d:%d\n", str, filename, yylineno, column);
+              "ERROR: %s in %s:%d:%d", str, filename, yylineno, column);
 }
