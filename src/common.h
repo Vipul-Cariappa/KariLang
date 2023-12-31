@@ -14,7 +14,7 @@ extern void yyerror(char const *s);
 extern int yylineno;
 extern int column;
 extern char *yytext;
-extern char *filename;
+extern const char *filename;
 
 extern bool cli_interpretation_mode;
 

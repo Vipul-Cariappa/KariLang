@@ -6,15 +6,15 @@ IMPLEMENT_HASH_FUNCTION;
 DS_TABLE_DEF(ast, AST, NULL);
 
 ast_table_t *ast;
-char *filename;
+const char *filename;
 
 bool cli_interpretation_mode = false;
-void interactive_interpretation();
+int interactive_interpretation();
+int file_interpretation(const char *file_name, int input);
 
 int main(int argc, char *argv[]) {
-    if ((argc == 2) && (!strcmp("-i", argv[1]))) {
-        interactive_interpretation();
-        return 0;
+    if (argc == 1) {
+        return interactive_interpretation();
     }
 
     if (argc != 3) {
@@ -22,7 +22,20 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    filename = argv[1];
+    return file_interpretation(argv[1], atoi(argv[2]));
+}
+
+int interactive_interpretation() {
+    cli_interpretation_mode = true;
+    ast = ast_table_new(100);
+    globalBooleans = boolean_table_new(100);
+    globalIntegers = integer_table_new(100);
+    yyparse();
+    return 0;
+}
+
+int file_interpretation(const char *file_name, int input) {
+    filename = file_name;
 
     FILE *file = fopen(filename, "r");
     if (file == NULL) {
@@ -30,23 +43,16 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    yyin = file;
-
-    /* BEGIN */
-    // int name_token, value_token = 0;
-    // while (0 != (name_token = yylex())) {
-    //     printf("NameToken: %d, ValueToken: %d, String: %s\n", name_token,
-    //     value_token, yytext);
-    // }
-
+    /* Initialization of Variables and Functions Table */
     ast = ast_table_new(100);
 
+    /* Parsing */
+    yyin = file;
     if (yyparse()) {
         fclose(file);
         fprintf(stderr, "%s\n", syntax_error_msg);
         return 1;
     }
-    /*  END  */
 
     fclose(file);
 
@@ -58,7 +64,6 @@ int main(int argc, char *argv[]) {
 
     /* Interpreting */
     int output;
-    int input = atoi(argv[2]);
     if (!interpret(input, &output)) {
         fprintf(stderr, "Runtime Error: %s\n", runtime_error_msg);
         return 1;
@@ -67,12 +72,4 @@ int main(int argc, char *argv[]) {
     printf("Input: %d\nOutput: %d\n", input, output);
 
     return 0;
-}
-
-void interactive_interpretation() {
-    cli_interpretation_mode = true;
-    ast = ast_table_new(100);
-    globalBooleans = boolean_table_new(100);
-    globalIntegers = integer_table_new(100);
-    yyparse();
 }
