@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 
+void* yy_scan_string(const char *);
+
 IMPLEMENT_HASH_FUNCTION;
 DS_TABLE_DEF(ast, AST, clear_ast);
 
@@ -30,8 +32,21 @@ int interactive_interpretation() {
     ast = ast_table_new(100);
     globalBooleans = boolean_table_new(100);
     globalIntegers = integer_table_new(100);
-    yyparse();
-    return 0;
+
+    char string[100];
+    while (true) {
+        printf(">>> ");
+        if (!fgets(string, 100, stdin)) {
+            fprintf(stderr, "Error while getting input\n");
+            return 1;
+        }
+        if ((!strcmp("exit\n", string)) || (!strcmp("exit;\n", string))) {
+            return 0;
+        }
+
+        yy_scan_string(string);
+        yyparse();
+    }
 }
 
 int file_interpretation(const char *file_name, int input) {
