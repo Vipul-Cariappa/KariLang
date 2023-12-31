@@ -52,12 +52,21 @@ bool interpret(int input, int *output) {
     while (NULL != (tree = ast_table_iter_next(ast, &key))) {
         switch (tree->type) {
         case AST_VARIABLE:
+            if (integer_table_get_ptr(globalIntegers, tree->value.var->name)) {
+                break;
+            }
+            errno = 0;
             if (tree->value.var->type == INT) {
                 assert(integer_table_insert(
                     globalIntegers, tree->value.var->name,
                     evaluate_expression(tree->value.var->expression, NULL)
                         .integer));
+                break;
             }
+            if (boolean_table_get_ptr(globalBooleans, tree->value.var->name)) {
+                break;
+            }
+            errno = 0;
             if (tree->value.var->type == BOOL) {
                 assert(boolean_table_insert(
                     globalBooleans, tree->value.var->name,
@@ -119,11 +128,28 @@ ExpressionResult evaluate_expression(Expression *exp, Context *cxt) {
         if (v) {
             return (ExpressionResult){.integer = *(int *)v};
         }
+        errno = 0;
         v = boolean_table_get_ptr(globalBooleans, exp->value.variable);
         if (v) {
             return (ExpressionResult){.boolean = *(bool *)v};
         }
         errno = 0;
+        AST *tree = ast_table_get_ptr(ast, exp->value.variable);
+        if (tree) {
+            ExpressionResult result_exp =
+                evaluate_expression(tree->value.var->expression, NULL);
+            if (tree->value.var->type == INT) {
+                assert(integer_table_insert(
+                    globalIntegers, tree->value.var->name, result_exp.integer));
+                return result_exp;
+            }
+            if (tree->value.var->type == BOOL) {
+                assert(boolean_table_insert(
+                    globalBooleans, tree->value.var->name, result_exp.boolean));
+                return result_exp;
+            }
+        }
+
         goto error;
     }
     case PLUS_EXPRESSION:
