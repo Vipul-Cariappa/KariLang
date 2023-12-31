@@ -51,6 +51,9 @@ bool verify_ast_semantics(AST *tree) {
             return false;
         }
         break;
+    case AST_EXPRESSION:
+        // TODO: print error msg
+        exit(1);
     }
     tree->semantically_correct = true;
     return tree;

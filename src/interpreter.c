@@ -26,9 +26,6 @@ typedef struct {
 
 size_t hash_function(const char *str);
 
-DS_TABLE_DEC(integer, int);
-DS_TABLE_DEC(boolean, bool);
-
 DS_TABLE_DEF(integer, int, NULL);
 DS_TABLE_DEF(boolean, bool, NULL);
 
@@ -90,6 +87,9 @@ bool interpret(int input, int *output) {
                     return false;
                 }
             }
+        case AST_EXPRESSION:
+            // TODO: print error
+            exit(1);
         }
     }
 

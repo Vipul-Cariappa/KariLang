@@ -1,5 +1,6 @@
 #include "common.h"
 #include <stdio.h>
+#include <string.h>
 
 IMPLEMENT_HASH_FUNCTION;
 DS_TABLE_DEF(ast, AST, NULL);
@@ -7,7 +8,15 @@ DS_TABLE_DEF(ast, AST, NULL);
 ast_table_t *ast;
 char *filename;
 
+bool cli_interpretation_mode = false;
+void interactive_interpretation();
+
 int main(int argc, char *argv[]) {
+    if ((argc == 2) && (!strcmp("-i", argv[1]))) {
+        interactive_interpretation();
+        return 0;
+    }
+
     if (argc != 3) {
         fprintf(stderr, "File and input required to execute the program\n");
         return 1;
@@ -58,4 +67,12 @@ int main(int argc, char *argv[]) {
     printf("Input: %d\nOutput: %d\n", input, output);
 
     return 0;
+}
+
+void interactive_interpretation() {
+    cli_interpretation_mode = true;
+    ast = ast_table_new(100);
+    globalBooleans = boolean_table_new(100);
+    globalIntegers = integer_table_new(100);
+    yyparse();
 }
