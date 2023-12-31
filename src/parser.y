@@ -1,5 +1,8 @@
 %{
     #include "common.h"
+
+    #define ERROR_MSG_LEN 500
+    char syntax_error_msg[ERROR_MSG_LEN];
 %}
 
 %union {
@@ -58,8 +61,8 @@
 
 %%
 input: %empty
-     | input value_definition { assert(ast_table_insert(ast, ($2)->name, (AST){.type = AST_VARIABLE, .value.var = $2})); }
-     | input function_definition { assert(ast_table_insert(ast, ($2)->funcname, (AST){.type = AST_FUNCTION, .value.func = $2})); };
+     | input value_definition { (ast_table_insert(ast, ($2)->name, (AST){.type = AST_VARIABLE, .value.var = $2})); }
+     | input function_definition { (ast_table_insert(ast, ($2)->funcname, (AST){.type = AST_FUNCTION, .value.func = $2})); };
 
 function_definition: KW_FUNCDEF IDENTIFIER function_definition_arguments RETURN KW_BOOL ASSIGN expression { $$ = set_function_return_value(set_function_name($3, $2), BOOL, $7); }
                    | KW_FUNCDEF IDENTIFIER function_definition_arguments RETURN KW_INT ASSIGN expression { $$ = set_function_return_value(set_function_name($3, $2), INT, $7);};
@@ -102,6 +105,7 @@ function_call_arguments: expression { $$ = add_function_call_argument_expression
                        | expression COMMA function_call_arguments { $$ = add_function_call_argument_expression($3, $1); };
 %%
 
-void yyerror(char const *s) {
-  fprintf(stderr, "PARSER ERROR: %s\n", s);
+void yyerror(char const *str) {
+    snprintf(syntax_error_msg, ERROR_MSG_LEN,
+              "ERROR: %s in %s:%d:%d\n", str, filename, yylineno, column);
 }

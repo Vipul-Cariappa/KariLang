@@ -1,5 +1,7 @@
 #pragma once
 
+#define YYERROR_VERBOSE 1
+
 #include "DS.h"
 #include <assert.h>
 #include <stdbool.h>
@@ -8,10 +10,13 @@
 extern FILE *yyin;
 extern int yylex(void);
 extern int yyparse(void);
-extern int yywrap(void);
 extern void yyerror(char const *s);
 extern int yylineno;
+extern int column;
 extern char *yytext;
+extern char *filename;
+
+extern char syntax_error_msg[];
 
 typedef enum {
     UNDEFINED,
