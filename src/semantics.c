@@ -52,8 +52,8 @@ bool verify_ast_semantics(AST *tree) {
         }
         break;
     case AST_EXPRESSION:
-        // TODO: print error msg
-        exit(1);
+        snprintf(semantic_error_msg, ERROR_MSG_LEN, "Internal Error");
+        return false;
     }
     tree->semantically_correct = true;
     return tree;

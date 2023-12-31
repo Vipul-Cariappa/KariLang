@@ -65,12 +65,13 @@
 %%
 input: %empty
      | input expression STATEMENT_END {
-        if (cli_interpretation_mode) {
+            if (cli_interpretation_mode) {
                 cli_interpret((AST){.type = AST_EXPRESSION, .value.exp = $2});
             }
             else {
-                // TODO: print error
-                exit(1);
+                yyerror("Standalone expression are not allowed\n");
+                // ???: Don't exit here
+                return 1;
             }
         }
      | input value_definition { 

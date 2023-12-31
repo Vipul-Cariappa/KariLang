@@ -87,9 +87,11 @@ bool interpret(int input, int *output) {
                     return false;
                 }
             }
+            break;
         case AST_EXPRESSION:
-            // TODO: print error
-            exit(1);
+            snprintf(syntax_error_msg, ERROR_MSG_LEN, "Internal Error");
+            // TODO: clean memory
+            return false;
         }
     }
 

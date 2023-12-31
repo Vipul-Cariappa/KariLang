@@ -433,8 +433,8 @@ static inline void print_ast_table(ast_table_t *ast) {
             print_variable(tree->value.var);
             break;
         case AST_EXPRESSION:
-            // TODO: print error
-            exit(1);
+            // TODO: print expression
+            break;
         }
         printf("\n");
     }
