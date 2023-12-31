@@ -77,6 +77,7 @@ _deps
 .vscode/
 .idea/
 .cache/
+.cmake/
 
 *.tab*
 *.tab*
