@@ -16,12 +16,24 @@ bool verify_ast_semantics(AST *tree);
 
 static inline bool cli_interpret(AST tree) {
     if (tree.type == AST_VARIABLE) {
+        if (ast_table_get_ptr(ast, tree.value.var->name)) {
+            ast_table_delete(ast, tree.value.var->name);
+            integer_table_delete(globalIntegers, tree.value.var->name);
+            boolean_table_delete(globalBooleans, tree.value.var->name);
+            errno = 0;
+        }
         if (!ast_table_insert(ast, tree.value.var->name, tree)) {
             fprintf(stderr, "AST insertion Error\n");
             errno = 0;
             return false;
         }
     } else if (tree.type == AST_FUNCTION) {
+        if (ast_table_get_ptr(ast, tree.value.func->funcname)) {
+            ast_table_delete(ast, tree.value.func->funcname);
+            integer_table_delete(globalIntegers, tree.value.func->funcname);
+            boolean_table_delete(globalBooleans, tree.value.func->funcname);
+            errno = 0;
+        }
         if (!ast_table_insert(ast, tree.value.func->funcname, tree)) {
             fprintf(stderr, "AST insertion Error\n");
             errno = 0;
@@ -42,11 +54,13 @@ static inline bool cli_interpret(AST tree) {
         fprintf(stderr,
                 "Error While Evaluation Expression\nSemantic Error: %s\n",
                 semantic_error_msg);
+        semantic_error_msg[0] = 0;
         return false;
     }
 
     if (!verify_ast_semantics(&tree)) {
         fprintf(stderr, "Semantic Error: %s\n", semantic_error_msg);
+        semantic_error_msg[0] = 0;
         return false;
     }
 

@@ -37,6 +37,7 @@
     TYPE name##_table_get(name##_table_t *tb, const char *key);                \
     TYPE *name##_table_get_ptr(name##_table_t *tb, const char *key);           \
     size_t name##_table_size(name##_table_t *tb);                              \
+    bool name##_table_delete(name##_table_t *tb, const char *key);             \
     TYPE *name##_table_iter_next(name##_table_t *tb, char **key);              \
     void name##_table_iter(name##_table_t *tb);                                \
     bool name##_table_clear(name##_table_t *tb);
@@ -457,6 +458,45 @@
                                                                                \
     size_t name##_table_size(name##_table_t *tb) { return tb->count; }         \
                                                                                \
-    bool name##_table_clear(name##_table_t *tb) { /* TODO: Implement */        \
+    bool name##_table_delete(name##_table_t *tb, const char *key) {            \
+        size_t hash = hash_function(key) % tb->array_length;                   \
+                                                                               \
+        _##name##_hash_table_list_node *item_list_node =                       \
+            tb->table_list + hash;                                             \
+                                                                               \
+        if (!(item_list_node->item_pair.key)) {                                \
+            errno = EINVAL;                                                    \
+            return false;                                                      \
+        }                                                                      \
+                                                                               \
+        bool is_first = true;                                                  \
+                                                                               \
+        do {                                                                   \
+            if (!strcmp(key, item_list_node->item_pair.key)) {                 \
+                delFunc(item_list_node->item_pair.value);                      \
+                                                                               \
+                void *to_free = item_list_node->next;                          \
+                if (item_list_node->next) {                                    \
+                    *item_list_node = *item_list_node->next;                   \
+                    if (!is_first) {                                           \
+                        free(to_free);                                         \
+                    }                                                          \
+                } else {                                                       \
+                    *item_list_node = (_##name##_hash_table_list_node){0};     \
+                }                                                              \
+                tb->count--;                                                   \
+                return true;                                                   \
+            }                                                                  \
+                                                                               \
+            is_first = false;                                                  \
+            item_list_node = item_list_node->next;                             \
+        } while (item_list_node);                                              \
+                                                                               \
+        errno = EINVAL;                                                        \
+        return false;                                                          \
+    }                                                                          \
+                                                                               \
+    bool name##_table_clear(name##_table_t *tb) {                              \
+        /* TODO: Implement */                                                  \
         return true;                                                           \
     }

@@ -93,14 +93,14 @@ bool verify_expression_type(Expression *exp, Type type, Context *cxt) {
                 }
                 snprintf(semantic_error_msg, ERROR_MSG_LEN,
                          "%s has type %s, but expected %s type",
-                         variable_ast->value.var->name,
+                         exp->value.variable,
                          Type_to_string(variable_ast->value.var->type),
                          Type_to_string(type));
                 return false;
             }
             snprintf(semantic_error_msg, ERROR_MSG_LEN,
                      "%s is not a variable definition",
-                     variable_ast->value.var->name);
+                     exp->value.variable);
             return false;
         }
 
@@ -119,7 +119,7 @@ bool verify_expression_type(Expression *exp, Type type, Context *cxt) {
     variable_not_found_error:
         snprintf(semantic_error_msg, ERROR_MSG_LEN,
                  "Could not find %s's variable definition",
-                 variable_ast->value.var->name);
+                 exp->value.variable);
         return false;
     }
     case BOOLEAN_EXPRESSION:
@@ -193,8 +193,18 @@ bool verify_expression_type(Expression *exp, Type type, Context *cxt) {
     case FUNCTION_CALL_EXPRESSION: {
         AST *func_ast =
             ast_table_get_ptr(ast, exp->value.function_call.funcname);
-        if (!func_ast)
+        if (!func_ast) {
+            snprintf(semantic_error_msg, ERROR_MSG_LEN,
+                     "Could not find function %s",
+                     exp->value.function_call.funcname);
             return false;
+        }
+        if (func_ast->type != AST_FUNCTION) {
+            snprintf(semantic_error_msg, ERROR_MSG_LEN,
+                     "%s is not a function",
+                     exp->value.variable);
+            return false;
+        }
 
         if (func_ast->value.func->return_type == type) {
             if (verify_function_call_arguments(

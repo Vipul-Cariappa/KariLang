@@ -3,7 +3,7 @@
 #include <string.h>
 
 IMPLEMENT_HASH_FUNCTION;
-DS_TABLE_DEF(ast, AST, NULL);
+DS_TABLE_DEF(ast, AST, clear_ast);
 
 ast_table_t *ast;
 const char *filename;

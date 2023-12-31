@@ -444,6 +444,17 @@ static inline void clear_expression(Expression *exp) {
     // TODO: implement
 }
 
-static inline void clear_variable(Expression *exp) {
+static inline void clear_variable(Variable *var) {
     // TODO: implement
 }
+
+static inline void clear_function(Function *func) {
+    // TODO: implement
+}
+
+static inline void clear_ast(AST tree) {
+    // TODO: implement
+}
+
+static inline void clean_integer(int x) {}
+static inline void clean_boolean(bool x) {}

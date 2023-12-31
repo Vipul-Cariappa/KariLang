@@ -26,8 +26,8 @@ typedef struct {
 
 size_t hash_function(const char *str);
 
-DS_TABLE_DEF(integer, int, NULL);
-DS_TABLE_DEF(boolean, bool, NULL);
+DS_TABLE_DEF(integer, int, clean_integer);
+DS_TABLE_DEF(boolean, bool, clean_boolean);
 
 ExpressionResult evaluate_expression(Expression *exp, Context *cxt);
 ExpressionResult execute_function_call(Function *func, Expression **args,
