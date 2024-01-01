@@ -131,6 +131,12 @@ bool verify_semantics();
 extern char runtime_error_msg[];
 bool interpret(int input, int *output);
 
+#define STDOUT_STRING_LENGTH 500
+#define STDERR_STRING_LENGTH 500
+
+extern char *STDOUT_REDIRECT_STRING;
+extern char *STDERR_REDIRECT_STRING;
+
 DS_TABLE_DEC(integer, int);
 DS_TABLE_DEC(boolean, bool);
 
