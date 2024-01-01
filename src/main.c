@@ -2,7 +2,10 @@
 #include <stdio.h>
 #include <string.h>
 
-void* yy_scan_string(const char *);
+void *yy_scan_string(const char *);
+
+char *STDOUT_REDIRECT_STRING;
+char *STDERR_REDIRECT_STRING;
 
 IMPLEMENT_HASH_FUNCTION;
 DS_TABLE_DEF(ast, AST, clear_ast);
@@ -15,6 +18,9 @@ int interactive_interpretation();
 int file_interpretation(const char *file_name, int input);
 
 int main(int argc, char *argv[]) {
+    STDOUT_REDIRECT_STRING = NULL;
+    STDERR_REDIRECT_STRING = NULL;
+
     if (argc == 1) {
         return interactive_interpretation();
     }
@@ -33,10 +39,13 @@ int interactive_interpretation() {
     globalBooleans = boolean_table_new(100);
     globalIntegers = integer_table_new(100);
 
-    char string[100];
+    // STDOUT_REDIRECT_STRING = calloc(STDOUT_STRING_LENGTH, 1);
+    // STDERR_REDIRECT_STRING = calloc(STDERR_STRING_LENGTH, 1);
+
+    static char string[500];
     while (true) {
         printf(">>> ");
-        if (!fgets(string, 100, stdin)) {
+        if (!fgets(string, 500, stdin)) {
             fprintf(stderr, "Error while getting input\n");
             return 1;
         }
@@ -46,6 +55,15 @@ int interactive_interpretation() {
 
         yy_scan_string(string);
         yyparse();
+        
+        // if (STDOUT_REDIRECT_STRING[0]) {
+        //     fprintf(stdout, ":: %s", STDOUT_REDIRECT_STRING);
+        //     STDOUT_REDIRECT_STRING[0] = 0;
+        // }
+        // if (STDERR_REDIRECT_STRING[0]) {
+        //     fprintf(stderr, ":: %s", STDERR_REDIRECT_STRING);
+        //     STDERR_REDIRECT_STRING[0] = 0;
+        // }
     }
 }
 
