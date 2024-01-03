@@ -49,5 +49,5 @@
 [ \t]+                    { HANDLE_COLUMN; }
 [\n]                      { HANDLE_COLUMN; next_column = 1; }
 \/\/.+                    { ; }
-.                         { HANDLE_COLUMN; return YYUNDEF; }
+.                         { HANDLE_COLUMN; /* TODO: handle error */ }
 %%
