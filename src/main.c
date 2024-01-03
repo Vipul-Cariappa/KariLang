@@ -38,14 +38,20 @@ int interactive_interpretation() {
     ast = ast_table_new(100);
     globalBooleans = boolean_table_new(100);
     globalIntegers = integer_table_new(100);
+    char new_input_prompt[] = ">>> ";
+    char continue_input_prompt[] = "     ";
 
     // STDOUT_REDIRECT_STRING = calloc(STDOUT_STRING_LENGTH, 1);
     // STDERR_REDIRECT_STRING = calloc(STDERR_STRING_LENGTH, 1);
 
     static char string[500];
+
+    char *prompt = new_input_prompt;
+    int input_length = 0;
+
     while (true) {
-        printf(">>> ");
-        if (!fgets(string, 500, stdin)) {
+        printf("%s", prompt);
+        if (!fgets(string + input_length, 500, stdin)) {
             fprintf(stderr, "Error while getting input\n");
             return 1;
         }
@@ -53,9 +59,31 @@ int interactive_interpretation() {
             return 0;
         }
 
+        input_length = 0;
+        bool get_more_input = false;
+        for (int i = 0; i < 500; i++) {
+            if (string[i] == 0)
+                break;
+            if (string[i] == ';')
+                get_more_input = false;
+            else if ((string[i] != ' ') && (string[i] != '\t') &&
+                     (string[i] != '\n'))
+                get_more_input = true;
+
+            input_length++;
+        }
+
+        if (get_more_input) {
+            prompt = continue_input_prompt;
+            continue;
+        } else {
+            prompt = new_input_prompt;
+            input_length = 0;
+        }
+
         yy_scan_string(string);
         yyparse();
-        
+
         // if (STDOUT_REDIRECT_STRING[0]) {
         //     fprintf(stdout, ":: %s", STDOUT_REDIRECT_STRING);
         //     STDOUT_REDIRECT_STRING[0] = 0;
