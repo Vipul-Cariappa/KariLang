@@ -1,0 +1,44 @@
+name: Build
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      
+      - name: Install Dependencies
+        run: |
+            sudo apt-get update
+            sudo apt-get upgrade -y
+            sudo apt-get install -y gcc-mingw-w64 cmake make gcc bison flex
+
+      - name: Build for Linux
+        run: |
+            cmake -DCMAKE_BUILD_TYPE=Release .
+            make
+            mv ./KariLang ./KariLang-Linux-x86-64
+
+      - name: Build for Windows
+        run: |
+            x86_64-w64-mingw32-gcc -O3 \
+             ./src/main.c \
+             ./src/semantics.c \
+             ./src/interpreter.c \
+             ./src/lex.yy.c \
+             ./src/parser.tab.c \
+             -o ./KariLang-Windows-x86-64.exe
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            KariLang-Windows-x86-64.exe
+            KariLang-Linux-x86-64
