@@ -1,9 +1,10 @@
-name: Release
+name: Build and Test
 
 on:
   push:
-    tags:
-    - "v*.*.*"
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
 
 jobs:
   build:
@@ -20,23 +21,16 @@ jobs:
 
       - name: Build for Linux
         run: |
-            cmake -DCMAKE_BUILD_TYPE=Release .
+            cmake -DCMAKE_BUILD_TYPE=Debug .
             make
             mv ./KariLang ./KariLang-Linux-x86-64
 
       - name: Build for Windows
         run: |
-            x86_64-w64-mingw32-gcc -O3 \
+            x86_64-w64-mingw32-gcc -Wall -g \
              ./src/main.c \
              ./src/semantics.c \
              ./src/interpreter.c \
              ./src/lex.yy.c \
              ./src/parser.tab.c \
              -o ./KariLang-Windows-x86-64.exe
-
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            KariLang-Windows-x86-64.exe
-            KariLang-Linux-x86-64
