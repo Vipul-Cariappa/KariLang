@@ -3,7 +3,9 @@
     #include <string.h>
     #include <ctype.h>
 
+    #ifdef _WIN32
     #define YY_NO_UNISTD_H 1
+    #endif
 
     static int next_column = 1;
     int column = 1;
