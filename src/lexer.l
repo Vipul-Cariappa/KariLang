@@ -3,6 +3,8 @@
     #include <string.h>
     #include <ctype.h>
 
+    #define YY_NO_UNISTD_H 1
+
     static int next_column = 1;
     int column = 1;
 
