@@ -2,6 +2,8 @@
 
 Toy Functional Programming Language
 
+You can test out the language using Jupyter Notebook [here](https://www.vipulcariappa.xyz/jupyterlite-deploy/lab/index.html?path=xeus-karilang.ipynb).
+
 ## Example Program
 
 ```text
