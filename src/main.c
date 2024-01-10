@@ -36,8 +36,7 @@ int main(int argc, char *argv[]) {
 int interactive_interpretation() {
     cli_interpretation_mode = true;
     ast = ast_table_new(100);
-    globalBooleans = boolean_table_new(100);
-    globalIntegers = integer_table_new(100);
+    globals = global_table_new(100);
     char new_input_prompt[] = ">>> ";
     char continue_input_prompt[] = "     ";
 

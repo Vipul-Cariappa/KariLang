@@ -125,6 +125,24 @@ DS_TABLE_DEC(ast, AST);
 
 extern ast_table_t *ast;
 
+typedef union {
+    int integer;
+    bool boolean;
+} ExpressionResult;
+
+typedef struct {
+    Type type;
+    ExpressionResult value;
+} global;
+
+size_t hash_function(const char *str);
+
+static inline void free_global(global gb) {}
+
+DS_TABLE_DEC(global, global);
+
+extern global_table_t *globals;
+
 extern char semantic_error_msg[];
 bool verify_semantics();
 
@@ -136,12 +154,6 @@ bool interpret(int input, int *output);
 
 extern char *STDOUT_REDIRECT_STRING;
 extern char *STDERR_REDIRECT_STRING;
-
-DS_TABLE_DEC(integer, int);
-DS_TABLE_DEC(boolean, bool);
-
-extern integer_table_t *globalIntegers;
-extern boolean_table_t *globalBooleans;
 
 // FIXME: Check if memory allocations fail
 
@@ -461,6 +473,3 @@ static inline void clear_function(Function *func) {
 static inline void clear_ast(AST tree) {
     // TODO: implement
 }
-
-static inline void clean_integer(int x) {}
-static inline void clean_boolean(bool x) {}

@@ -9,11 +9,6 @@
 
 char runtime_error_msg[ERROR_MSG_LEN];
 
-typedef union {
-    int integer;
-    bool boolean;
-} ExpressionResult;
-
 struct _context {
     const char *var_name;
     ExpressionResult var_value;
@@ -24,22 +19,17 @@ typedef struct {
     struct _context *variable;
 } Context;
 
-size_t hash_function(const char *str);
-
-DS_TABLE_DEF(integer, int, clean_integer);
-DS_TABLE_DEF(boolean, bool, clean_boolean);
+DS_TABLE_DEF(global, global, free_global);
 
 ExpressionResult evaluate_expression(Expression *exp, Context *cxt);
 ExpressionResult execute_function_call(Function *func, Expression **args,
                                        Context *cxt);
 
-integer_table_t *globalIntegers;
-boolean_table_t *globalBooleans;
+global_table_t *globals;
 
 bool interpret(int input, int *output) {
     // initialize global variables table
-    globalBooleans = boolean_table_new(100);
-    globalIntegers = integer_table_new(100);
+    globals = global_table_new(100);
 
     Function *main_func = NULL;
     char *key;
@@ -49,28 +39,18 @@ bool interpret(int input, int *output) {
     while (NULL != (tree = ast_table_iter_next(ast, &key))) {
         switch (tree->type) {
         case AST_VARIABLE:
-            if (integer_table_get_ptr(globalIntegers, tree->value.var->name)) {
+            if (global_table_get_ptr(globals, tree->value.var->name)) {
                 break;
             }
             errno = 0;
-            if (tree->value.var->type == INT) {
-                assert(integer_table_insert(
-                    globalIntegers, tree->value.var->name,
-                    evaluate_expression(tree->value.var->expression, NULL)
-                        .integer));
-                break;
-            }
-            if (boolean_table_get_ptr(globalBooleans, tree->value.var->name)) {
-                break;
-            }
-            errno = 0;
-            if (tree->value.var->type == BOOL) {
-                assert(boolean_table_insert(
-                    globalBooleans, tree->value.var->name,
-                    evaluate_expression(tree->value.var->expression, NULL)
-                        .boolean));
-            }
+
+            assert(global_table_insert(
+                globals, tree->value.var->name,
+                (global){.value = evaluate_expression(
+                             tree->value.var->expression, NULL),
+                         .type = tree->value.var->type}));
             break;
+
         case AST_FUNCTION:
             if (!strcmp(tree->value.func->funcname, "main")) {
                 main_func = tree->value.func;
@@ -126,30 +106,17 @@ ExpressionResult evaluate_expression(Expression *exp, Context *cxt) {
         }
 
         // check the global variables
-        void *v = integer_table_get_ptr(globalIntegers, exp->value.variable);
-        if (v) {
-            return (ExpressionResult){.integer = *(int *)v};
-        }
-        errno = 0;
-        v = boolean_table_get_ptr(globalBooleans, exp->value.variable);
-        if (v) {
-            return (ExpressionResult){.boolean = *(bool *)v};
-        }
+        global *v = global_table_get_ptr(globals, exp->value.variable);
+        if (v)
+            return v->value;
         errno = 0;
         AST *tree = ast_table_get_ptr(ast, exp->value.variable);
         if (tree) {
             ExpressionResult result_exp =
                 evaluate_expression(tree->value.var->expression, NULL);
-            if (tree->value.var->type == INT) {
-                assert(integer_table_insert(
-                    globalIntegers, tree->value.var->name, result_exp.integer));
-                return result_exp;
-            }
-            if (tree->value.var->type == BOOL) {
-                assert(boolean_table_insert(
-                    globalBooleans, tree->value.var->name, result_exp.boolean));
-                return result_exp;
-            }
+            assert(global_table_insert(
+                globals, tree->value.var->name,
+                (global){.type = tree->value.var->type, .value = result_exp}));
         }
 
         goto error;
