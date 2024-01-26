@@ -9,23 +9,25 @@ You can test out the language using Jupyter Notebook [here](https://www.vipulcar
 ```text
 valdef zero: int = 0;
 valdef one: int = 1;
-valdef two: int = one + one;
+valdef two: int = + one one;
 
-funcdef sum(n: int) -> int = _sum(zero, n);
+funcdef sum n: int -> int =
+    _sum 0 n;
 
-funcdef _sum(c: int, n: int) -> int =
-    if n == zero then
+funcdef _sum c: int n: int -> int =
+    if == 0 n then
         c
     else
-        _sum(c + n, n + -1);
+        _sum (+ c n) (+ n (-1));
 
-funcdef fib(n: int) -> int = 
-    if n < two then
+funcdef fib n: int -> int = 
+    if < n two then
         n 
     else
-        fib(n + -1) + fib(n + -two);
+        + (fib (+ n  (-1))) (fib (+ n (-two)));
 
-funcdef main(n: int) -> int = fib(n);
+funcdef main n: int -> int =
+    sum n;
 ```
 
 To Run

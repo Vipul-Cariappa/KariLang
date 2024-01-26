@@ -1,11 +1,6 @@
 #include "common.h"
 #include <stdarg.h>
 
-typedef union {
-    int integer;
-    bool boolean;
-} ExpressionResult;
-
 typedef struct {
     size_t arglen;
     Argument *args;
@@ -20,8 +15,7 @@ static inline bool cli_interpret(AST tree) {
     if (tree.type == AST_VARIABLE) {
         if (ast_table_get_ptr(ast, tree.value.var->name)) {
             ast_table_delete(ast, tree.value.var->name);
-            integer_table_delete(globalIntegers, tree.value.var->name);
-            boolean_table_delete(globalBooleans, tree.value.var->name);
+            global_table_delete(globals, tree.value.var->name);
             errno = 0;
         }
         if (!ast_table_insert(ast, tree.value.var->name, tree)) {
@@ -32,8 +26,8 @@ static inline bool cli_interpret(AST tree) {
     } else if (tree.type == AST_FUNCTION) {
         if (ast_table_get_ptr(ast, tree.value.func->funcname)) {
             ast_table_delete(ast, tree.value.func->funcname);
-            integer_table_delete(globalIntegers, tree.value.func->funcname);
-            boolean_table_delete(globalBooleans, tree.value.func->funcname);
+            // ???: is the below deletion necessary here
+            global_table_delete(globals, tree.value.func->funcname);
             errno = 0;
         }
         if (!ast_table_insert(ast, tree.value.func->funcname, tree)) {
@@ -68,17 +62,12 @@ static inline bool cli_interpret(AST tree) {
     }
 
     if (tree.type == AST_VARIABLE) {
-        if (tree.value.var->type == INT) {
-            assert(integer_table_insert(
-                globalIntegers, tree.value.var->name,
-                evaluate_expression(tree.value.var->expression, NULL).integer));
-        } else {
-            assert(boolean_table_insert(
-                globalBooleans, tree.value.var->name,
-                evaluate_expression(tree.value.var->expression, NULL).boolean));
-        }
+        assert(global_table_insert(
+            globals, tree.value.var->name,
+            (global){.value =
+                         evaluate_expression(tree.value.var->expression, NULL),
+                     .type = tree.value.var->type}));
     }
-
     return true;
 }
 
