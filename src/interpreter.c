@@ -117,6 +117,8 @@ ExpressionResult evaluate_expression(Expression *exp, Context *cxt) {
             assert(global_table_insert(
                 globals, tree->value.var->name,
                 (global){.type = tree->value.var->type, .value = result_exp}));
+            
+            return result_exp;
         }
 
         goto error;
