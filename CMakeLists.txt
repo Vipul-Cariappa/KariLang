@@ -5,7 +5,7 @@ set(CMAKE_C_STANDARD 11)
 
 find_package(BISON 3.0 REQUIRED)
 
-bison_target(PARSER "src/parser.y" "src/parser.tab.c" DEFINES_FILE "src/parser.tab.h" COMPILE_FLAGS "-Wall -Wcounterexamples")
+bison_target(PARSER "src/parser.yy" "src/parser.tab.c" DEFINES_FILE "src/parser.tab.h" COMPILE_FLAGS "-Wall -Wcounterexamples")
 
 find_package(FLEX 2.0 REQUIRED)
 
