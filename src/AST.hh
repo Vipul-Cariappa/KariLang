@@ -56,6 +56,7 @@ class BaseExpression {
     bool semantics_correct = false;
 
     inline virtual ~BaseExpression() = default;
+    BaseExpression &operator=(BaseExpression &&other) = default;
 
     virtual bool verify_semantics() = 0;
 
@@ -80,6 +81,7 @@ class UnaryOperator : public BaseExpression {
         : fst(std::move(fst)), op_type(op_type) {}
 
     inline virtual ~UnaryOperator() = default;
+    UnaryOperator &operator=(UnaryOperator &&other) = default;
 
     inline friend std::ostream &operator<<(std::ostream &os,
                                            UnaryOperator const &m) {
@@ -101,6 +103,9 @@ class BinaryOperator : public BaseExpression {
                           std::unique_ptr<Expression> snd,
                           BINARY_OPERATOR op_type)
         : fst(std::move(fst)), snd(std::move(snd)), op_type(op_type) {}
+
+    inline virtual ~BinaryOperator() = default;
+    BinaryOperator &operator=(BinaryOperator &&other) = default;
 
     inline friend std::ostream &operator<<(std::ostream &os,
                                            BinaryOperator const &m) {
@@ -163,6 +168,7 @@ class IfOperator : public BaseExpression {
         : cond(std::move(cond)), yes(std::move(yes)), no(std::move(no)) {}
 
     inline virtual ~IfOperator() = default;
+    IfOperator &operator=(IfOperator &&other) = default;
 
     inline friend std::ostream &operator<<(std::ostream &os,
                                            IfOperator const &m) {
@@ -177,14 +183,34 @@ class IfOperator : public BaseExpression {
 class FunctionCall : public BaseExpression {
   public:
     std::string function_name;
-    FunctionArguments args;
+    std::vector<std::unique_ptr<Expression>> args;
+
+    inline FunctionCall() {}
+
+    inline FunctionCall(FunctionCall &&fc) {
+        this->function_name = fc.function_name;
+        this->args = std::move(fc.args);
+    }
 
     inline virtual ~FunctionCall() = default;
+    FunctionCall &operator=(FunctionCall &&other) = default;
 
     inline friend std::ostream &operator<<(std::ostream &os,
                                            FunctionCall const &m) {
-        // TODO: implement
-        return os << m.function_name << "()";
+        os << m.function_name;
+        for (const std::unique_ptr<Expression> &i : m.args) {
+            os << " (" << i << ")";
+        }
+        return os;
+    }
+
+    inline void set_function_name(std::string name) {
+        // FIXME
+        this->function_name = name;
+    }
+
+    inline void add_argument(std::unique_ptr<Expression> arg) {
+        this->args.push_back(std::move(arg));
     }
 
     virtual bool verify_semantics() override;
@@ -209,10 +235,14 @@ class Expression : public BaseExpression {
         : value(std::move(value)), type(BINARY_OP_EXP) {}
     inline Expression(std::unique_ptr<IfOperator> value)
         : value(std::move(value)), type(IF_EXP) {}
-    inline Expression(std::unique_ptr<FunctionCall> value)
-        : value(std::move(value)), type(FUNCTION_CALL_EXP) {}
+    inline Expression(FunctionCall value) {
+        this->type = FUNCTION_CALL_EXP;
+        std::unique_ptr<FunctionCall> f(new FunctionCall(std::move(value)));
+        this->value = std::move(f);
+    }
 
     inline virtual ~Expression() = default;
+    Expression &operator=(Expression &&other) = default;
 
     inline friend std::ostream &operator<<(std::ostream &os,
                                            Expression const &m) {
@@ -253,6 +283,11 @@ class Expression : public BaseExpression {
 
     inline static std::unique_ptr<Expression> from(std::string value) {
         std::unique_ptr<Expression> result(new Expression(value));
+        return result;
+    }
+
+    inline static std::unique_ptr<Expression> from(FunctionCall fc) {
+        std::unique_ptr<Expression> result(new Expression(std::move(fc)));
         return result;
     }
 

@@ -76,7 +76,7 @@
 %type function_definition;
 %type function_definition_arguments;
 %type value_definition;
-%type function_call_arguments;
+%type <FunctionCall>function_call_arguments;
 
 %precedence KW_ELSE
 %left AND OR
@@ -89,7 +89,7 @@
 
 %%
 input: %empty
-     | input expression STATEMENT_END { std::cout << $2; }
+     | input expression STATEMENT_END { std::cout << $2 << std::endl; }
      | input value_definition {}
      | input function_definition {};
 
@@ -127,10 +127,10 @@ expression: basic_expression { $$ = std::move($1); }
           | LESSER basic_expression basic_expression { $$ = Expression::from(std::move($2), std::move($3), LT_OP); }
           | LESSER_EQUALS basic_expression basic_expression { $$ = Expression::from(std::move($2), std::move($3), LTE_OP); }
           | KW_IF expression KW_THEN expression KW_ELSE expression { $$ = Expression::from(std::move($2), std::move($4), std::move($6)); }
-          | IDENTIFIER function_call_arguments {  $$ = Expression::from($1); /* FIXME */ };
+          | IDENTIFIER function_call_arguments { ($2).set_function_name($1); $$ = Expression::from(std::move($2)); };
 
-function_call_arguments: basic_expression {}
-                       | basic_expression function_call_arguments {};
+function_call_arguments: basic_expression { $$ = FunctionCall(); ($$).add_argument(std::move($1)); }
+                       | basic_expression function_call_arguments { ($2).add_argument(std::move($1)); $$ = std::move($2); };
 %%
 void yy::parser::error(const location_type& loc, const std::string& s) {
     std::cerr << loc << ": " << s << '\n';
