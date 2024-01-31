@@ -69,13 +69,13 @@
 
 /* %type <function> function_definition; */
 /* %type <function> function_definition_arguments; */
-/* %type <variable> value_definition; */
+%type <std::unique_ptr<ValueDef>> value_definition;
 %type <std::unique_ptr<Expression>> expression;
 %type <std::unique_ptr<Expression>> basic_expression;
 /* %type <expression> function_call_arguments; */
 %type function_definition;
 %type function_definition_arguments;
-%type value_definition;
+/* %type value_definition; */
 %type <FunctionCall>function_call_arguments;
 
 %precedence KW_ELSE
@@ -90,7 +90,7 @@
 %%
 input: %empty
      | input expression STATEMENT_END { std::cout << $2 << std::endl; }
-     | input value_definition {}
+     | input value_definition { std::cout << $2 << std::endl; }
      | input function_definition {};
 
 function_definition: KW_FUNCDEF IDENTIFIER function_definition_arguments RETURN KW_BOOL ASSIGN expression STATEMENT_END {}
@@ -102,8 +102,8 @@ function_definition_arguments: IDENTIFIER TYPE_OF KW_BOOL {}
                              | IDENTIFIER TYPE_OF KW_INT function_definition_arguments {}
                              | OPEN_BRACKETS function_definition_arguments CLOSE_BRACKETS {};
 
-value_definition: KW_VALDEF IDENTIFIER TYPE_OF KW_BOOL ASSIGN expression STATEMENT_END {}
-                | KW_VALDEF IDENTIFIER TYPE_OF KW_INT ASSIGN expression STATEMENT_END {};
+value_definition: KW_VALDEF IDENTIFIER TYPE_OF KW_BOOL ASSIGN expression STATEMENT_END { $$ = ValueDef::from(BOOL_T, $2, std::move($6)); }
+                | KW_VALDEF IDENTIFIER TYPE_OF KW_INT ASSIGN expression STATEMENT_END { $$ = ValueDef::from(INT_T, $2, std::move($6)); };
 
 basic_expression: IDENTIFIER { $$ = Expression::from($1); }
                 | INTEGER { $$ = Expression::from($1); }

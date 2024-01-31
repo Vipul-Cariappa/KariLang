@@ -42,11 +42,42 @@ enum BINARY_OPERATOR {
     LTE_OP,
 };
 
-class FunctionArguments {
+class BaseExpression;
+class UnaryOperator;
+class BinaryOperator;
+class IfOperator;
+class Expression;
+
+class ValueDef {
   public:
-    std::vector<std::string> args_name;
-    std::vector<TYPE> args_type;
-    size_t length;
+    TYPE type;
+    std::string name;
+    std::unique_ptr<Expression> expression;
+
+    inline ValueDef(TYPE type, std::string name,
+                    std::unique_ptr<Expression> expression)
+        : type(type), name(name), expression(std::move(expression)) {}
+
+    inline virtual ~ValueDef() = default;
+
+    inline friend std::ostream &operator<<(std::ostream &os,
+                                           ValueDef const &m) {
+        switch (m.type) {
+        case BOOL_T:
+            return os << "valdef " << m.name << ": "
+                      << "bool = " << m.expression << ";";
+        case INT_T:
+            return os << "valdef " << m.name << ": "
+                      << "int = " << m.expression << ";";
+        }
+    }
+
+    inline static std::unique_ptr<ValueDef>
+    from(TYPE type, std::string name, std::unique_ptr<Expression> expression) {
+        std::unique_ptr<ValueDef> result(
+            new ValueDef(type, name, std::move(expression)));
+        return result;
+    }
 };
 
 class BaseExpression {
@@ -65,11 +96,6 @@ class BaseExpression {
 
     virtual void generate_llvm_ir() = 0;
 };
-
-class UnaryOperator;
-class BinaryOperator;
-class IfOperator;
-class Expression;
 
 class UnaryOperator : public BaseExpression {
   public:
