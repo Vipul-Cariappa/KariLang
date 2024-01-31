@@ -22,6 +22,15 @@ enum TYPE {
     INT_T,
 };
 
+inline std::string ToString(TYPE type) {
+    switch (type) {
+    case BOOL_T:
+        return "bool";
+    case INT_T:
+        return "int";
+    }
+}
+
 enum UNARY_OPERATOR {
     NOT_OP,
     NEG_OP,
@@ -42,6 +51,36 @@ enum BINARY_OPERATOR {
     LTE_OP,
 };
 
+inline std::string ToString(BINARY_OPERATOR op) {
+    switch (op) {
+    case ADD_OP:
+        return "+";
+    case MUL_OP:
+        return "*";
+    case DIV_OP:
+        return "/";
+    case MOD_OP:
+        return "%";
+    case AND_OP:
+        return "&&";
+    case OR_OP:
+        return "||";
+    case EQS_OP:
+        return "==";
+    case NEQ_OP:
+        return "!=";
+    case GT_OP:
+        return ">";
+        break;
+    case GTE_OP:
+        return ">=";
+    case LT_OP:
+        return "<";
+    case LTE_OP:
+        return "<=";
+    }
+}
+
 class BaseExpression;
 class UnaryOperator;
 class BinaryOperator;
@@ -59,23 +98,60 @@ class ValueDef {
         : type(type), name(name), expression(std::move(expression)) {}
 
     inline virtual ~ValueDef() = default;
+    ValueDef &operator=(ValueDef &&other) = default;
 
     inline friend std::ostream &operator<<(std::ostream &os,
                                            ValueDef const &m) {
-        switch (m.type) {
-        case BOOL_T:
-            return os << "valdef " << m.name << ": "
-                      << "bool = " << m.expression << ";";
-        case INT_T:
-            return os << "valdef " << m.name << ": "
-                      << "int = " << m.expression << ";";
-        }
+
+        return os << "valdef " << m.name << ": " << ToString(m.type) << " = "
+                  << m.expression << ";";
     }
 
     inline static std::unique_ptr<ValueDef>
     from(TYPE type, std::string name, std::unique_ptr<Expression> expression) {
         std::unique_ptr<ValueDef> result(
             new ValueDef(type, name, std::move(expression)));
+        return result;
+    }
+};
+
+class FunctionDef {
+  public:
+    TYPE return_type;
+    std::string name;
+    std::vector<std::string> args_name;
+    std::vector<TYPE> args_type;
+    std::unique_ptr<Expression> expression;
+
+    inline FunctionDef() {}
+
+    inline virtual ~FunctionDef() = default;
+    FunctionDef &operator=(FunctionDef &&other) = default;
+
+    inline friend std::ostream &operator<<(std::ostream &os,
+                                           FunctionDef const &m) {
+        os << "funcdef " << m.name;
+        for (size_t i = 0; i < m.args_name.size(); i++) {
+            os << " " << m.args_name[i] << ": " << m.args_type[i];
+        }
+        os << " ->" << ToString(m.return_type) << " " << m.expression << ";";
+        return os;
+    }
+
+    inline void add_argument(TYPE arg_type, std::string arg_name) {
+        this->args_name.push_back(arg_name);
+        this->args_type.push_back(arg_type);
+    }
+
+    inline void set_info(std::string name, TYPE return_type,
+                         std::unique_ptr<Expression> expression) {
+        this->name = name;
+        this->return_type = return_type;
+        this->expression = std::move(expression);
+    }
+
+    inline static std::unique_ptr<FunctionDef> from() {
+        std::unique_ptr<FunctionDef> result(new FunctionDef());
         return result;
     }
 };
@@ -135,46 +211,9 @@ class BinaryOperator : public BaseExpression {
 
     inline friend std::ostream &operator<<(std::ostream &os,
                                            BinaryOperator const &m) {
-        std::string op_str;
-        switch (m.op_type) {
-        case ADD_OP:
-            op_str = '+';
-            break;
-        case MUL_OP:
-            op_str = '*';
-            break;
-        case DIV_OP:
-            op_str = '/';
-            break;
-        case MOD_OP:
-            op_str = '%';
-            break;
-        case AND_OP:
-            op_str = "&&";
-            break;
-        case OR_OP:
-            op_str = "||";
-            break;
-        case EQS_OP:
-            op_str = "==";
-            break;
-        case NEQ_OP:
-            op_str = "!=";
-            break;
-        case GT_OP:
-            op_str = '>';
-            break;
-        case GTE_OP:
-            op_str = ">=";
-            break;
-        case LT_OP:
-            op_str = '<';
-            break;
-        case LTE_OP:
-            op_str = "<=";
-            break;
-        }
-        return os << "(" << m.fst << ") " << op_str << " (" << m.snd << ")";
+
+        return os << "(" << m.fst << ") " << ToString(m.op_type) << " ("
+                  << m.snd << ")";
     }
 
     virtual bool verify_semantics() override;

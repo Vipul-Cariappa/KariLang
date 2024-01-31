@@ -67,16 +67,12 @@
 
 %token EOF 0 "end-of-file"
 
-/* %type <function> function_definition; */
-/* %type <function> function_definition_arguments; */
-%type <std::unique_ptr<ValueDef>> value_definition;
-%type <std::unique_ptr<Expression>> expression;
 %type <std::unique_ptr<Expression>> basic_expression;
-/* %type <expression> function_call_arguments; */
-%type function_definition;
-%type function_definition_arguments;
-/* %type value_definition; */
+%type <std::unique_ptr<Expression>> expression;
 %type <FunctionCall>function_call_arguments;
+%type <std::unique_ptr<ValueDef>> value_definition;
+%type <std::unique_ptr<FunctionDef>> function_definition;
+%type <std::unique_ptr<FunctionDef>> function_definition_arguments;
 
 %precedence KW_ELSE
 %left AND OR
@@ -91,16 +87,16 @@
 input: %empty
      | input expression STATEMENT_END { std::cout << $2 << std::endl; }
      | input value_definition { std::cout << $2 << std::endl; }
-     | input function_definition {};
+     | input function_definition { std::cout << $2 << std::endl; };
 
-function_definition: KW_FUNCDEF IDENTIFIER function_definition_arguments RETURN KW_BOOL ASSIGN expression STATEMENT_END {}
-                   | KW_FUNCDEF IDENTIFIER function_definition_arguments RETURN KW_INT ASSIGN expression STATEMENT_END {};
+function_definition: KW_FUNCDEF IDENTIFIER function_definition_arguments RETURN KW_BOOL ASSIGN expression STATEMENT_END { ($3)->set_info($2, BOOL_T, std::move($7)); $$ = std::move($3); }
+                   | KW_FUNCDEF IDENTIFIER function_definition_arguments RETURN KW_INT ASSIGN expression STATEMENT_END { ($3)->set_info($2, INT_T, std::move($7)); $$ = std::move($3); };
 
-function_definition_arguments: IDENTIFIER TYPE_OF KW_BOOL {}
-                             | IDENTIFIER TYPE_OF KW_INT {}
-                             | IDENTIFIER TYPE_OF KW_BOOL function_definition_arguments {}
-                             | IDENTIFIER TYPE_OF KW_INT function_definition_arguments {}
-                             | OPEN_BRACKETS function_definition_arguments CLOSE_BRACKETS {};
+function_definition_arguments: IDENTIFIER TYPE_OF KW_BOOL { $$ = FunctionDef::from(); ($$)->add_argument(BOOL_T, $1); }
+                             | IDENTIFIER TYPE_OF KW_INT { $$ = FunctionDef::from(); ($$)->add_argument(INT_T, $1); }
+                             | IDENTIFIER TYPE_OF KW_BOOL function_definition_arguments { ($4)->add_argument(BOOL_T, $1); $$ = std::move($4); }
+                             | IDENTIFIER TYPE_OF KW_INT function_definition_arguments { ($4)->add_argument(INT_T, $1); $$ = std::move($4); }
+                             | OPEN_BRACKETS function_definition_arguments CLOSE_BRACKETS { $$ = std::move($2); };
 
 value_definition: KW_VALDEF IDENTIFIER TYPE_OF KW_BOOL ASSIGN expression STATEMENT_END { $$ = ValueDef::from(BOOL_T, $2, std::move($6)); }
                 | KW_VALDEF IDENTIFIER TYPE_OF KW_INT ASSIGN expression STATEMENT_END { $$ = ValueDef::from(INT_T, $2, std::move($6)); };
@@ -132,6 +128,7 @@ expression: basic_expression { $$ = std::move($1); }
 function_call_arguments: basic_expression { $$ = FunctionCall(); ($$).add_argument(std::move($1)); }
                        | basic_expression function_call_arguments { ($2).add_argument(std::move($1)); $$ = std::move($2); };
 %%
+
 void yy::parser::error(const location_type& loc, const std::string& s) {
     std::cerr << loc << ": " << s << '\n';
 }
