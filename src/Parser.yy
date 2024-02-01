@@ -25,7 +25,8 @@
 }
 
 %code {
-    
+    #include <stdio.h>
+    extern FILE *yyin;
 }
 
 %printer { yyo << $$; } <int>;
@@ -133,7 +134,16 @@ void yy::parser::error(const location_type& loc, const std::string& s) {
     std::cerr << loc << ": " << s << '\n';
 }
 
-int parse() {
+int parse(std::string filename) {
+    if (filename != "") {
+        FILE *file = fopen(filename.c_str(), "r");
+        if (file == NULL) {
+            std::cerr << "Could not open file " << filename << "\n";
+            return 1;
+        }
+        yyin = file;
+    }
+
     auto num_errors = 0;
     yy::parser parser(num_errors);
     auto status = parser.parse();
