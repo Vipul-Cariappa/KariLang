@@ -4,6 +4,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -134,7 +135,7 @@ class FunctionDef {
         for (size_t i = 0; i < m.args_name.size(); i++) {
             os << " " << m.args_name[i] << ": " << m.args_type[i];
         }
-        os << " ->" << ToString(m.return_type) << " " << m.expression << ";";
+        os << " -> " << ToString(m.return_type) << " " << m.expression << ";";
         return os;
     }
 
@@ -387,3 +388,21 @@ class Expression : public BaseExpression {
     virtual std::variant<bool, int> interpret() override;
     virtual void generate_llvm_ir() override;
 };
+
+inline std::ostream &
+print(std::ostream &os,
+      std::unordered_map<std::string, std::unique_ptr<FunctionDef>> &ast) {
+    for (auto &i : ast) {
+        os << i.second << "\n";
+    }
+    return os;
+}
+
+inline std::ostream &
+print(std::ostream &os,
+      std::unordered_map<std::string, std::unique_ptr<ValueDef>> &ast) {
+    for (auto &i : ast) {
+        os << i.second << "\n";
+    }
+    return os;
+}
