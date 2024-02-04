@@ -82,6 +82,9 @@ inline std::string ToString(BINARY_OPERATOR op) {
     }
 }
 
+class ValueDef;
+class FunctionDef;
+
 class BaseExpression;
 class UnaryOperator;
 class BinaryOperator;
@@ -114,6 +117,16 @@ class ValueDef {
             new ValueDef(type, name, std::move(expression)));
         return result;
     }
+
+    bool verify_semantics(
+        std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
+            &functions_ast,
+        std::unordered_map<std::string, std::unique_ptr<ValueDef>>
+            &globals_ast);
+
+    std::variant<bool, int> interpret(/* ???: a context maybe required */);
+
+    void generate_llvm_ir();
 };
 
 class FunctionDef {
@@ -155,18 +168,33 @@ class FunctionDef {
         std::unique_ptr<FunctionDef> result(new FunctionDef());
         return result;
     }
+
+    bool verify_semantics(
+        std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
+            &functions_ast,
+        std::unordered_map<std::string, std::unique_ptr<ValueDef>>
+            &globals_ast);
+
+    std::variant<bool, int> interpret(/* ???: a context maybe required */);
+
+    void generate_llvm_ir();
 };
 
 class BaseExpression {
   public:
     TYPE result_type; // type of the computed result's type
-    bool semantics_verified = false;
-    bool semantics_correct = false;
+    // bool semantics_verified = false;
+    // bool semantics_correct = false;
 
     inline virtual ~BaseExpression() = default;
     BaseExpression &operator=(BaseExpression &&other) = default;
 
-    virtual bool verify_semantics() = 0;
+    virtual bool verify_semantics(
+        TYPE result_type,
+        std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
+            &functions_ast,
+        std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
+        std::unordered_map<std::string, TYPE> &context) = 0;
 
     virtual std::variant<bool, int>
         interpret(/* ???: a context maybe required */) = 0;
@@ -191,7 +219,12 @@ class UnaryOperator : public BaseExpression {
         return os << (m.op_type == NOT_OP ? "!(" : "-(") << m.fst << ")";
     }
 
-    virtual bool verify_semantics() override;
+    virtual bool verify_semantics(
+        TYPE result_type,
+        std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
+            &functions_ast,
+        std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,std::unordered_map<std::string, TYPE> &context)
+        override;
     virtual std::variant<bool, int> interpret() override;
     virtual void generate_llvm_ir() override;
 };
@@ -217,7 +250,13 @@ class BinaryOperator : public BaseExpression {
                   << m.snd << ")";
     }
 
-    virtual bool verify_semantics() override;
+    virtual bool verify_semantics(
+        TYPE result_type,
+        std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
+            &functions_ast,
+        std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
+        std::unordered_map<std::string, TYPE> &context)
+        override;
     virtual std::variant<bool, int> interpret() override;
     virtual void generate_llvm_ir() override;
 };
@@ -241,7 +280,13 @@ class IfOperator : public BaseExpression {
         return os << "if (" << m.cond << ") then " << m.yes << " else " << m.no;
     }
 
-    virtual bool verify_semantics() override;
+    virtual bool verify_semantics(
+        TYPE result_type,
+        std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
+            &functions_ast,
+        std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
+        std::unordered_map<std::string, TYPE> &context)
+        override;
     virtual std::variant<bool, int> interpret() override;
     virtual void generate_llvm_ir() override;
 };
@@ -279,7 +324,13 @@ class FunctionCall : public BaseExpression {
         this->args.push_back(std::move(arg));
     }
 
-    virtual bool verify_semantics() override;
+    virtual bool verify_semantics(
+        TYPE result_type,
+        std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
+            &functions_ast,
+        std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
+        std::unordered_map<std::string, TYPE> &context)
+        override;
     virtual std::variant<bool, int> interpret() override;
     virtual void generate_llvm_ir() override;
 };
@@ -384,7 +435,13 @@ class Expression : public BaseExpression {
         return result;
     }
 
-    virtual bool verify_semantics() override;
+    virtual bool verify_semantics(
+        TYPE result_type,
+        std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
+            &functions_ast,
+        std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
+        std::unordered_map<std::string, TYPE> &context)
+        override;
     virtual std::variant<bool, int> interpret() override;
     virtual void generate_llvm_ir() override;
 };
