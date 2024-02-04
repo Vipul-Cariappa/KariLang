@@ -106,10 +106,11 @@ input: %empty
                     std::cerr << "Invalid semantics for the given expression\n" << PROMPT;
                 }
                 else {
-                    try {
-                        std::cout << std::get<int>(($2)->interpret(functions_ast, globals_ast, interpret_context)) << PROMPT;
-                    } catch (const std::bad_variant_access& ex) {
-                        std::cout << (std::get<bool>(($2)->interpret(functions_ast, globals_ast, interpret_context)) ? "true" : "false") << PROMPT;
+                    std::variant<bool, int> res = ($2)->interpret(functions_ast, globals_ast, interpret_context);
+                    if (std::holds_alternative<int>(res)) {
+                        std::cout << std::get<int>(res) << PROMPT;
+                    } else {
+                        std::cout << (std::get<bool>(res) ? "true" : "false") << PROMPT;
                     }
                 }
             } else {

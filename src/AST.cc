@@ -16,17 +16,13 @@ bool Expression::verify_semantics(
             return true;
         return false;
     case VARIABLE_EXP:
-        try {
-            if (globals_ast.at(std::get<std::string>(value))->type ==
-                result_type)
-                return true;
-        } catch (std::out_of_range e) {
-        }
-        try {
-            if (context.at(std::get<std::string>(value)) == result_type)
-                return true;
-        } catch (std::out_of_range e) {
-        }
+        if ((globals_ast.find(std::get<std::string>(value)) !=
+             globals_ast.end()) &&
+            (globals_ast.at(std::get<std::string>(value))->type == result_type))
+            return true;
+        if ((context.find(std::get<std::string>(value)) != context.end()) &&
+            (context.at(std::get<std::string>(value)) == result_type))
+            return true;
         return false;
     case UNARY_OP_EXP:
         return std::get<std::unique_ptr<UnaryOperator>>(value)
@@ -56,10 +52,11 @@ std::variant<bool, int> Expression::interpret(
     case BOOLEAN_EXP:
         return std::get<bool>(value);
     case VARIABLE_EXP:
-        try {
+        if (globals_ast.find(std::get<std::string>(value)) !=
+            globals_ast.end()) {
             return globals_ast.at(std::get<std::string>(value))
                 ->interpret(functions_ast, globals_ast, context);
-        } catch (std::out_of_range e) {
+        } else {
             return context.at(std::get<std::string>(value));
         }
     case UNARY_OP_EXP:
@@ -75,11 +72,6 @@ std::variant<bool, int> Expression::interpret(
         return std::get<std::unique_ptr<FunctionCall>>(value)->interpret(
             functions_ast, globals_ast, context);
     }
-}
-
-void Expression::generate_llvm_ir() {
-    // TODO: implement
-    throw "Not Implemented";
 }
 
 bool UnaryOperator::verify_semantics(
@@ -117,11 +109,6 @@ std::variant<bool, int> UnaryOperator::interpret(
         return -(
             std::get<int>(fst->interpret(functions_ast, globals_ast, context)));
     }
-}
-
-void UnaryOperator::generate_llvm_ir() {
-    // TODO: implement
-    throw "Not Implemented";
 }
 
 bool BinaryOperator::verify_semantics(
@@ -227,11 +214,6 @@ std::variant<bool, int> BinaryOperator::interpret(
     }
 }
 
-void BinaryOperator::generate_llvm_ir() {
-    // TODO: implement
-    throw "Not Implemented";
-}
-
 bool IfOperator::verify_semantics(
     TYPE result_type,
     std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
@@ -257,18 +239,13 @@ std::variant<bool, int> IfOperator::interpret(
                : no->interpret(functions_ast, globals_ast, context);
 }
 
-void IfOperator::generate_llvm_ir() {
-    // TODO: implement
-    throw "Not Implemented";
-}
-
 bool FunctionCall::verify_semantics(
     TYPE result_type,
     std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
         &functions_ast,
     std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
     std::unordered_map<std::string, TYPE> &context) {
-    try {
+    if (functions_ast.find(function_name) != functions_ast.end()) {
         std::unique_ptr<FunctionDef> &func = functions_ast.at(function_name);
         if (func->args_type.size() != args.size())
             return false;
@@ -282,9 +259,8 @@ bool FunctionCall::verify_semantics(
                 return false;
         }
         return true;
-    } catch (std::out_of_range e) {
-        return false;
     }
+    return false;
 }
 
 std::variant<bool, int> FunctionCall::interpret(
@@ -304,11 +280,6 @@ std::variant<bool, int> FunctionCall::interpret(
     return func->interpret(functions_ast, globals_ast, my_context);
 }
 
-void FunctionCall::generate_llvm_ir() {
-    // TODO: implement
-    throw "Not Implemented";
-}
-
 bool ValueDef::verify_semantics(
     std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
         &functions_ast,
@@ -323,11 +294,6 @@ std::variant<bool, int> ValueDef::interpret(
     std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
     std::unordered_map<std::string, std::variant<bool, int>> &context) {
     return expression->interpret(functions_ast, globals_ast, context);
-}
-
-void ValueDef::generate_llvm_ir() {
-    // TODO: implement
-    throw "Not Implemented";
 }
 
 bool FunctionDef::verify_semantics(
@@ -349,9 +315,4 @@ std::variant<bool, int> FunctionDef::interpret(
     std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
     std::unordered_map<std::string, std::variant<bool, int>> &context) {
     return expression->interpret(functions_ast, globals_ast, context);
-}
-
-void FunctionDef::generate_llvm_ir() {
-    // TODO: implement
-    throw "Not Implemented";
 }

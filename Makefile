@@ -9,7 +9,8 @@ PARSER_OUTPUT = $(BUILD_DIR)/Parser.tab.cc
 
 SOURCE_FILES = \
   $(SRC_DIR)/Main.cc \
-  $(SRC_DIR)/AST.cc
+  $(SRC_DIR)/AST.cc \
+  $(SRC_DIR)/Compile.cc
 
 HEADER_FILES = \
   $(SRC_DIR)/Utils.hh \
@@ -22,7 +23,12 @@ INCLUDE_OPTIONS = \
 
 C = clang
 CXX = clang++
-BUILD_OPTIONS = -Wall -g -fsanitize=address -fno-omit-frame-pointer
+BUILD_OPTIONS = \
+  -Wall \
+  -g \
+  -fsanitize=address \
+  -fno-omit-frame-pointer \
+  `llvm-config --cxxflags --ldflags --system-libs --libs all`
 
 $(BUILD_DIR)/KariLang: $(SOURCE_FILES) $(LEXER_OUTPUT) $(PARSER_OUTPUT) $(HEADER_FILES)
 	$(CXX) $(BUILD_OPTIONS) $(INCLUDE_OPTIONS) $(SOURCE_FILES) $(LEXER_OUTPUT) $(PARSER_OUTPUT) -o $@

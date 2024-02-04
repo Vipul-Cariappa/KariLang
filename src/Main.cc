@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
     }
 
     // interpret
-    try {
+    if (functions_ast.find("main") != functions_ast.end()) {
         std::unique_ptr<FunctionDef> &func_main = functions_ast.at("main");
 
         if ((func_main->args_name.size() != 1) &&
@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
             func_main->interpret(functions_ast, globals_ast, context));
         std::cout << "Input: " << std::stoi(argv[2]) << "\nOutput: " << res
                   << "\n";
-    } catch (std::out_of_range e) {
+    } else {
         std::cerr << "Error: Could not find main function\n";
         return 1;
     }
