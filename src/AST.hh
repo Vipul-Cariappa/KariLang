@@ -124,7 +124,11 @@ class ValueDef {
         std::unordered_map<std::string, std::unique_ptr<ValueDef>>
             &globals_ast);
 
-    std::variant<bool, int> interpret(/* ???: a context maybe required */);
+    std::variant<bool, int> interpret(
+        std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
+            &functions_ast,
+        std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
+        std::unordered_map<std::string, std::variant<bool, int>> &context);
 
     void generate_llvm_ir();
 };
@@ -175,7 +179,11 @@ class FunctionDef {
         std::unordered_map<std::string, std::unique_ptr<ValueDef>>
             &globals_ast);
 
-    std::variant<bool, int> interpret(/* ???: a context maybe required */);
+    std::variant<bool, int> interpret(
+        std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
+            &functions_ast,
+        std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
+        std::unordered_map<std::string, std::variant<bool, int>> &context);
 
     void generate_llvm_ir();
 };
@@ -197,7 +205,10 @@ class BaseExpression {
         std::unordered_map<std::string, TYPE> &context) = 0;
 
     virtual std::variant<bool, int>
-        interpret(/* ???: a context maybe required */) = 0;
+        interpret(std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
+            &functions_ast,
+        std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
+        std::unordered_map<std::string, std::variant<bool, int>> &context) = 0;
 
     virtual void generate_llvm_ir() = 0;
 };
@@ -223,9 +234,12 @@ class UnaryOperator : public BaseExpression {
         TYPE result_type,
         std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
             &functions_ast,
-        std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,std::unordered_map<std::string, TYPE> &context)
-        override;
-    virtual std::variant<bool, int> interpret() override;
+        std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
+        std::unordered_map<std::string, TYPE> &context) override;
+    virtual std::variant<bool, int> interpret(std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
+            &functions_ast,
+        std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
+        std::unordered_map<std::string, std::variant<bool, int>> &context) override;
     virtual void generate_llvm_ir() override;
 };
 
@@ -255,9 +269,11 @@ class BinaryOperator : public BaseExpression {
         std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
             &functions_ast,
         std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
-        std::unordered_map<std::string, TYPE> &context)
-        override;
-    virtual std::variant<bool, int> interpret() override;
+        std::unordered_map<std::string, TYPE> &context) override;
+    virtual std::variant<bool, int> interpret(std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
+            &functions_ast,
+        std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
+        std::unordered_map<std::string, std::variant<bool, int>> &context) override;
     virtual void generate_llvm_ir() override;
 };
 
@@ -285,9 +301,11 @@ class IfOperator : public BaseExpression {
         std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
             &functions_ast,
         std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
-        std::unordered_map<std::string, TYPE> &context)
-        override;
-    virtual std::variant<bool, int> interpret() override;
+        std::unordered_map<std::string, TYPE> &context) override;
+    virtual std::variant<bool, int> interpret(std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
+            &functions_ast,
+        std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
+        std::unordered_map<std::string, std::variant<bool, int>> &context) override;
     virtual void generate_llvm_ir() override;
 };
 
@@ -329,9 +347,11 @@ class FunctionCall : public BaseExpression {
         std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
             &functions_ast,
         std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
-        std::unordered_map<std::string, TYPE> &context)
-        override;
-    virtual std::variant<bool, int> interpret() override;
+        std::unordered_map<std::string, TYPE> &context) override;
+    virtual std::variant<bool, int> interpret(std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
+            &functions_ast,
+        std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
+        std::unordered_map<std::string, std::variant<bool, int>> &context) override;
     virtual void generate_llvm_ir() override;
 };
 
@@ -440,9 +460,11 @@ class Expression : public BaseExpression {
         std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
             &functions_ast,
         std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
-        std::unordered_map<std::string, TYPE> &context)
-        override;
-    virtual std::variant<bool, int> interpret() override;
+        std::unordered_map<std::string, TYPE> &context) override;
+    virtual std::variant<bool, int> interpret(std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
+            &functions_ast,
+        std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
+        std::unordered_map<std::string, std::variant<bool, int>> &context) override;
     virtual void generate_llvm_ir() override;
 };
 

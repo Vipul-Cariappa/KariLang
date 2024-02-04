@@ -45,10 +45,36 @@ bool Expression::verify_semantics(
     }
 }
 
-std::variant<bool, int>
-Expression::interpret(/* ???: a context maybe required */) {
-    // TODO: implement
-    throw "Not Implemented";
+std::variant<bool, int> Expression::interpret(
+    std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
+        &functions_ast,
+    std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
+    std::unordered_map<std::string, std::variant<bool, int>> &context) {
+    switch (type) {
+    case INTEGER_EXP:
+        return std::get<int>(value);
+    case BOOLEAN_EXP:
+        return std::get<bool>(value);
+    case VARIABLE_EXP:
+        try {
+            return globals_ast.at(std::get<std::string>(value))
+                ->interpret(functions_ast, globals_ast, context);
+        } catch (std::out_of_range e) {
+            return context.at(std::get<std::string>(value));
+        }
+    case UNARY_OP_EXP:
+        return std::get<std::unique_ptr<UnaryOperator>>(value)->interpret(
+            functions_ast, globals_ast, context);
+    case BINARY_OP_EXP:
+        return std::get<std::unique_ptr<BinaryOperator>>(value)->interpret(
+            functions_ast, globals_ast, context);
+    case IF_EXP:
+        return std::get<std::unique_ptr<IfOperator>>(value)->interpret(
+            functions_ast, globals_ast, context);
+    case FUNCTION_CALL_EXP:
+        return std::get<std::unique_ptr<FunctionCall>>(value)->interpret(
+            functions_ast, globals_ast, context);
+    }
 }
 
 void Expression::generate_llvm_ir() {
@@ -76,10 +102,21 @@ bool UnaryOperator::verify_semantics(
     }
 }
 
-std::variant<bool, int>
-UnaryOperator::interpret(/* ???: a context maybe required */) {
-    // TODO: implement
-    throw "Not Implemented";
+std::variant<bool, int> UnaryOperator::interpret(
+    std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
+        &functions_ast,
+    std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
+    std::unordered_map<std::string, std::variant<bool, int>> &context) {
+    switch (op_type) {
+    case NOT_OP:
+        return std::get<bool>(
+                   fst->interpret(functions_ast, globals_ast, context))
+                   ? false
+                   : true;
+    case NEG_OP:
+        return -(
+            std::get<int>(fst->interpret(functions_ast, globals_ast, context)));
+    }
 }
 
 void UnaryOperator::generate_llvm_ir() {
@@ -121,10 +158,73 @@ bool BinaryOperator::verify_semantics(
     }
 }
 
-std::variant<bool, int>
-BinaryOperator::interpret(/* ???: a context maybe required */) {
-    // TODO: implement
-    throw "Not Implemented";
+std::variant<bool, int> BinaryOperator::interpret(
+    std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
+        &functions_ast,
+    std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
+    std::unordered_map<std::string, std::variant<bool, int>> &context) {
+    switch (op_type) {
+    case ADD_OP:
+        return (std::get<int>(
+                   fst->interpret(functions_ast, globals_ast, context))) +
+               (std::get<int>(
+                   snd->interpret(functions_ast, globals_ast, context)));
+    case MUL_OP:
+        return (std::get<int>(
+                   fst->interpret(functions_ast, globals_ast, context))) *
+               (std::get<int>(
+                   snd->interpret(functions_ast, globals_ast, context)));
+    case DIV_OP:
+        return (std::get<int>(
+                   fst->interpret(functions_ast, globals_ast, context))) /
+               (std::get<int>(
+                   snd->interpret(functions_ast, globals_ast, context)));
+    case MOD_OP:
+        return (std::get<int>(
+                   fst->interpret(functions_ast, globals_ast, context))) %
+               (std::get<int>(
+                   snd->interpret(functions_ast, globals_ast, context)));
+    case AND_OP:
+        return (std::get<bool>(
+                   fst->interpret(functions_ast, globals_ast, context))) &&
+               (std::get<bool>(
+                   snd->interpret(functions_ast, globals_ast, context)));
+    case OR_OP:
+        return (std::get<bool>(
+                   fst->interpret(functions_ast, globals_ast, context))) ||
+               (std::get<bool>(
+                   snd->interpret(functions_ast, globals_ast, context)));
+    case EQS_OP:
+        return (std::get<int>(
+                   fst->interpret(functions_ast, globals_ast, context))) ==
+               (std::get<int>(
+                   snd->interpret(functions_ast, globals_ast, context)));
+    case NEQ_OP:
+        return (std::get<int>(
+                   fst->interpret(functions_ast, globals_ast, context))) !=
+               (std::get<int>(
+                   snd->interpret(functions_ast, globals_ast, context)));
+    case GT_OP:
+        return (std::get<int>(
+                   fst->interpret(functions_ast, globals_ast, context))) >
+               (std::get<int>(
+                   snd->interpret(functions_ast, globals_ast, context)));
+    case GTE_OP:
+        return (std::get<int>(
+                   fst->interpret(functions_ast, globals_ast, context))) >=
+               (std::get<int>(
+                   snd->interpret(functions_ast, globals_ast, context)));
+    case LT_OP:
+        return (std::get<int>(
+                   fst->interpret(functions_ast, globals_ast, context))) <
+               (std::get<int>(
+                   snd->interpret(functions_ast, globals_ast, context)));
+    case LTE_OP:
+        return (std::get<int>(
+                   fst->interpret(functions_ast, globals_ast, context))) <=
+               (std::get<int>(
+                   snd->interpret(functions_ast, globals_ast, context)));
+    }
 }
 
 void BinaryOperator::generate_llvm_ir() {
@@ -147,10 +247,14 @@ bool IfOperator::verify_semantics(
                                 context);
 }
 
-std::variant<bool, int>
-IfOperator::interpret(/* ???: a context maybe required */) {
-    // TODO: implement
-    throw "Not Implemented";
+std::variant<bool, int> IfOperator::interpret(
+    std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
+        &functions_ast,
+    std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
+    std::unordered_map<std::string, std::variant<bool, int>> &context) {
+    return std::get<bool>(cond->interpret(functions_ast, globals_ast, context))
+               ? yes->interpret(functions_ast, globals_ast, context)
+               : no->interpret(functions_ast, globals_ast, context);
 }
 
 void IfOperator::generate_llvm_ir() {
@@ -183,10 +287,21 @@ bool FunctionCall::verify_semantics(
     }
 }
 
-std::variant<bool, int>
-FunctionCall::interpret(/* ???: a context maybe required */) {
-    // TODO: implement
-    throw "Not Implemented";
+std::variant<bool, int> FunctionCall::interpret(
+    std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
+        &functions_ast,
+    std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
+    std::unordered_map<std::string, std::variant<bool, int>> &context) {
+    // TODO: change context 's type to std::unique_ptr<Expression>
+    //        that will automatically change to lazy evaluation of arguments
+    std::unordered_map<std::string, std::variant<bool, int>> my_context;
+    std::unique_ptr<FunctionDef> &func = functions_ast.at(function_name);
+    for (size_t i = 0; i < func->args_name.size(); i++) {
+        my_context.insert(
+            {func->args_name.at(i),
+             args.at(i)->interpret(functions_ast, globals_ast, context)});
+    }
+    return func->interpret(functions_ast, globals_ast, my_context);
 }
 
 void FunctionCall::generate_llvm_ir() {
@@ -202,10 +317,12 @@ bool ValueDef::verify_semantics(
     return expression->verify_semantics(type, functions_ast, globals_ast, r);
 }
 
-std::variant<bool, int>
-ValueDef::interpret(/* ???: a context maybe required */) {
-    // TODO: implement
-    throw "Not Implemented";
+std::variant<bool, int> ValueDef::interpret(
+    std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
+        &functions_ast,
+    std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
+    std::unordered_map<std::string, std::variant<bool, int>> &context) {
+    return expression->interpret(functions_ast, globals_ast, context);
 }
 
 void ValueDef::generate_llvm_ir() {
@@ -226,10 +343,12 @@ bool FunctionDef::verify_semantics(
                                         context);
 }
 
-std::variant<bool, int>
-FunctionDef::interpret(/* ???: a context maybe required */) {
-    // TODO: implement
-    throw "Not Implemented";
+std::variant<bool, int> FunctionDef::interpret(
+    std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
+        &functions_ast,
+    std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
+    std::unordered_map<std::string, std::variant<bool, int>> &context) {
+    return expression->interpret(functions_ast, globals_ast, context);
 }
 
 void FunctionDef::generate_llvm_ir() {

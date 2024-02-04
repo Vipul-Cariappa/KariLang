@@ -54,16 +54,21 @@ int main(int argc, char *argv[]) {
     // interpret
     try {
         std::unique_ptr<FunctionDef> &func_main = functions_ast.at("main");
-        
-        if ((func_main->args_name.size() != 1) && (func_main->args_type.at(0) != INT_T)) {
-            std::cerr << "main function can tak only 1 int type argument\n";
+
+        if ((func_main->args_name.size() != 1) &&
+            (func_main->args_type.at(0) != INT_T) &&
+            (func_main->return_type != INT_T)) {
+            std::cerr << "main function can take only 1 int type argument and "
+                         "should return int\n";
             return 1;
         }
 
-        std::unordered_map<std::string, std::variant<int, bool>> context;
+        std::unordered_map<std::string, std::variant<bool, int>> context;
         context.insert({func_main->args_name.at(0), std::stoi(argv[2])});
-        // func_main->interpret();
-
+        int res = std::get<int>(
+            func_main->interpret(functions_ast, globals_ast, context));
+        std::cout << "Input: " << std::stoi(argv[2]) << "\nOutput: " << res
+                  << "\n";
     } catch (std::out_of_range e) {
         std::cerr << "Error: Could not find main function\n";
         return 1;
