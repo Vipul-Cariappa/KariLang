@@ -11,7 +11,7 @@
 %locations
 
 %param { int& num_errors }
-%param { bool compile }
+%param { bool interpret }
 %param { std::unordered_map<std::string, std::unique_ptr<FunctionDef>> &functions_ast }
 %param { std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast }
 
@@ -25,10 +25,13 @@
         )
 
     YY_DECL;
+
+    #define PROMPT std::endl << ">>> "
 }
 
 %code requires {
     #include <iostream>
+    #include <variant>
     #include <unordered_map>
     #include "AST.hh"
 }
@@ -95,9 +98,26 @@
 
 %%
 input: %empty
-     /* | input expression STATEMENT_END { std::cout << $2 << std::endl; } */
-     | input value_definition { globals_ast[($2)->name] = std::move($2); }
-     | input function_definition { functions_ast[($2)->name] = std::move($2); };
+     | input expression STATEMENT_END { 
+            if (interpret) {
+                std::unordered_map<std::string, std::variant<bool, int>> interpret_context;
+                std::unordered_map<std::string, TYPE> semantics_context;
+                if (!((($2)->verify_semantics(INT_T, functions_ast, globals_ast, semantics_context)) || (($2)->verify_semantics(BOOL_T, functions_ast, globals_ast, semantics_context)))) {
+                    std::cerr << "Invalid semantics for the given expression\n" << PROMPT;
+                }
+                else {
+                    try {
+                        std::cout << std::get<int>(($2)->interpret(functions_ast, globals_ast, interpret_context)) << PROMPT;
+                    } catch (const std::bad_variant_access& ex) {
+                        std::cout << (std::get<bool>(($2)->interpret(functions_ast, globals_ast, interpret_context)) ? "true" : "false") << PROMPT;
+                    }
+                }
+            } else {
+                std::cerr << "Cannot have expressions at top level\n" << PROMPT;
+            }
+        }
+     | input value_definition { std::cout << ($2) << PROMPT; globals_ast.insert({($2)->name, std::move($2)}); }
+     | input function_definition { std::cout << ($2) << PROMPT; functions_ast.insert({($2)->name, std::move($2)}); };
 
 function_definition: KW_FUNCDEF IDENTIFIER function_definition_arguments RETURN KW_BOOL ASSIGN expression STATEMENT_END { ($3)->set_info($2, BOOL_T, std::move($7)); $$ = std::move($3); }
                    | KW_FUNCDEF IDENTIFIER function_definition_arguments RETURN KW_INT ASSIGN expression STATEMENT_END { ($3)->set_info($2, INT_T, std::move($7)); $$ = std::move($3); };
@@ -144,7 +164,7 @@ void yy::parser::error(const location_type& loc, const std::string& s) {
 }
 
 int parse(
-    std::string filename, bool compile,
+    std::string filename, bool interpret,
     std::unordered_map<std::string, std::unique_ptr<FunctionDef>> &functions_ast,
     std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast) {
     if (filename != "") {
@@ -157,7 +177,7 @@ int parse(
     }
 
     auto num_errors = 0;
-    yy::parser parser(num_errors, compile, functions_ast, globals_ast);
+    yy::parser parser(num_errors, interpret, functions_ast, globals_ast);
     auto status = parser.parse();
     return status;
 }
