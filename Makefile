@@ -26,12 +26,12 @@ CXX = clang++
 BUILD_OPTIONS = \
   -Wall \
   -g \
-  -fsanitize=address \
-  -fno-omit-frame-pointer \
   `llvm-config --cxxflags --ldflags --system-libs --libs all`
+  # -fsanitize=address \
+  # -fno-omit-frame-pointer
 
 $(BUILD_DIR)/KariLang: $(SOURCE_FILES) $(LEXER_OUTPUT) $(PARSER_OUTPUT) $(HEADER_FILES)
-	$(CXX) $(BUILD_OPTIONS) $(INCLUDE_OPTIONS) $(SOURCE_FILES) $(LEXER_OUTPUT) $(PARSER_OUTPUT) -o $@
+	$(CXX) $(INCLUDE_OPTIONS) $(SOURCE_FILES) $(LEXER_OUTPUT) $(PARSER_OUTPUT) $(BUILD_OPTIONS) -o $@
 
 $(LEXER_OUTPUT): $(LEXER_FILE) $(PARSER_OUTPUT)
 	flex -o $@ $(LEXER_FILE)
@@ -41,4 +41,4 @@ $(PARSER_OUTPUT): $(PARSER_FILE)
 
 .PHONY: clean
 clean:
-	rm bin/*
+	rm bin/* && rm tmp/*.o

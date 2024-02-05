@@ -1,4 +1,5 @@
 #include "AST.hh"
+#include "Compile.hh"
 #include <iostream>
 #include <memory>
 #include <string>
@@ -9,6 +10,12 @@ int parse(
     std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
         &functions_ast,
     std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast);
+
+int interpret(
+    std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
+        &functions_ast,
+    std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
+    int input);
 
 int main(int argc, char *argv[]) {
     std::unordered_map<std::string, std::unique_ptr<FunctionDef>> functions_ast;
@@ -24,6 +31,7 @@ int main(int argc, char *argv[]) {
         return parse("", true, functions_ast, globals_ast);
     } else {
         std::cerr << "File and input required to execute the program\n";
+        std::cerr << "Or pass \"-c\" flag to compile\n";
         return 1;
     }
 
@@ -48,6 +56,16 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    if (std::string(argv[2]) == "-c")
+        return Compile(argv[1], functions_ast, globals_ast);
+    return interpret(functions_ast, globals_ast, std::stoi(argv[2]));
+}
+
+int interpret(
+    std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
+        &functions_ast,
+    std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
+    int input) {
     // interpret
     if (functions_ast.find("main") != functions_ast.end()) {
         std::unique_ptr<FunctionDef> &func_main = functions_ast.at("main");
@@ -61,11 +79,10 @@ int main(int argc, char *argv[]) {
         }
 
         std::unordered_map<std::string, std::variant<bool, int>> context;
-        context.insert({func_main->args_name.at(0), std::stoi(argv[2])});
+        context.insert({func_main->args_name.at(0), input});
         int res = std::get<int>(
             func_main->interpret(functions_ast, globals_ast, context));
-        std::cout << "Input: " << std::stoi(argv[2]) << "\nOutput: " << res
-                  << "\n";
+        std::cout << "Input: " << input << "\nOutput: " << res << "\n";
     } else {
         std::cerr << "Error: Could not find main function\n";
         return 1;
