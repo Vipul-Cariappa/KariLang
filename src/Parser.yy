@@ -102,6 +102,7 @@ input: %empty
             if (interpret) {
                 std::unordered_map<std::string, std::variant<bool, int>> interpret_context;
                 std::unordered_map<std::string, TYPE> semantics_context;
+                /* TODO: use `semantics_verified` and `semantics_correct` */
                 if (!((($2)->verify_semantics(INT_T, functions_ast, globals_ast, semantics_context)) || (($2)->verify_semantics(BOOL_T, functions_ast, globals_ast, semantics_context)))) {
                     std::cerr << "Invalid semantics for the given expression\n" << PROMPT;
                 }
@@ -114,11 +115,11 @@ input: %empty
                     }
                 }
             } else {
-                std::cerr << "Cannot have expressions at top level\n" << PROMPT;
+                std::cerr << "Cannot have expressions at top level\n";
             }
         }
-     | input value_definition { std::cout << ($2) << PROMPT; globals_ast.insert({($2)->name, std::move($2)}); }
-     | input function_definition { std::cout << ($2) << PROMPT; functions_ast.insert({($2)->name, std::move($2)}); };
+     | input value_definition { if (interpret) std::cout << ($2) << PROMPT; globals_ast.insert({($2)->name, std::move($2)}); }
+     | input function_definition { if (interpret) std::cout << ($2) << PROMPT; functions_ast.insert({($2)->name, std::move($2)}); };
 
 function_definition: KW_FUNCDEF IDENTIFIER function_definition_arguments RETURN KW_BOOL ASSIGN expression STATEMENT_END { ($3)->set_info($2, BOOL_T, std::move($7)); $$ = std::move($3); }
                    | KW_FUNCDEF IDENTIFIER function_definition_arguments RETURN KW_INT ASSIGN expression STATEMENT_END { ($3)->set_info($2, INT_T, std::move($7)); $$ = std::move($3); };
