@@ -26,7 +26,6 @@ int main(int argc, char *argv[]) {
     if (argc == 3) {
         status = parse(argv[1], false, functions_ast, globals_ast);
     } else if (argc == 1) {
-        // TODO: implement
         std::cout << ">>> ";
         return parse("", true, functions_ast, globals_ast);
     } else {

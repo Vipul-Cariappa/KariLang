@@ -192,9 +192,9 @@ class FunctionDef {
 
 class BaseExpression {
   public:
-    TYPE result_type; // type of the computed result's type
-    bool semantics_verified = false;
-    bool semantics_correct = false;
+    TYPE result_type; // TODO: use this, type of the computed result's type
+    bool semantics_verified = false; // TODO: use this
+    bool semantics_correct = false;  // TODO: use this
 
     inline virtual ~BaseExpression() = default;
     BaseExpression &operator=(BaseExpression &&other) = default;
@@ -342,7 +342,6 @@ class FunctionCall : public BaseExpression {
     }
 
     inline void set_function_name(std::string name) {
-        // FIXME
         this->function_name = name;
     }
 

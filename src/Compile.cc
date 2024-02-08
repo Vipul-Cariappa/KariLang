@@ -1,7 +1,5 @@
 #include "Compile.hh"
 #include "AST.hh"
-#include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -20,9 +18,10 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Host.h"
-#include <algorithm>
+#include "llvm/Transforms/InstCombine/InstCombine.h"
+#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/GVN.h"
 #include <cassert>
-#include <cctype>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
@@ -38,6 +37,7 @@ std::unique_ptr<llvm::LLVMContext> TheContext;
 std::unique_ptr<llvm::IRBuilder<>> Builder;
 std::unique_ptr<llvm::Module> TheModule;
 std::map<std::string, llvm::Value *> NamedValues;
+std::unique_ptr<llvm::legacy::FunctionPassManager> TheFPM;
 
 llvm::Value *LogErrorV(const char *str) {
     std::cerr << str;
@@ -51,7 +51,7 @@ llvm::Value *Expression::generate_llvm_ir() {
             *TheContext, llvm::APInt(32, std::get<int>(value), true));
     case BOOLEAN_EXP:
         return llvm::ConstantInt::get(
-            *TheContext, llvm::APInt(1, std::get<int>(value), false));
+            *TheContext, llvm::APInt(1, std::get<bool>(value), false));
     case VARIABLE_EXP:
         return NamedValues[std::get<std::string>(value)];
     case UNARY_OP_EXP:
@@ -105,6 +105,7 @@ llvm::Value *BinaryOperator::generate_llvm_ir() {
     case OR_OP:
         return Builder->CreateOr(L, R, "or_op");
     case EQS_OP:;
+        // FIXME: the below ops should be converted to 1 bit result
         return Builder->CreateICmpEQ(L, R, "eqs_op");
     case NEQ_OP:
         return Builder->CreateICmpNE(L, R, "neq_op");
@@ -120,11 +121,60 @@ llvm::Value *BinaryOperator::generate_llvm_ir() {
 }
 
 llvm::Value *IfOperator::generate_llvm_ir() {
-    // FIXME: Cannot use CreateSelect should use CreatePHI
     llvm::Value *Cond = cond->generate_llvm_ir();
-    llvm::Value *TrueV = yes->generate_llvm_ir();
-    llvm::Value *FalseV = no->generate_llvm_ir();
-    return Builder->CreateSelect(Cond, TrueV, FalseV, "if_op");
+    if (!Cond)
+        return nullptr;
+
+    llvm::Function *TheFunction = Builder->GetInsertBlock()->getParent();
+
+    // create a temporary variable to store the result of if operation
+    llvm::IRBuilder<> TmpB(&TheFunction->getEntryBlock(),
+                           TheFunction->getEntryBlock().begin());
+    llvm::AllocaInst *if_op_result;
+    switch (result_type) {
+        // FIXME: result_type is not being updated anywhere
+    case BOOL_T:
+        // if_op_result =
+        // Builder->CreateAlloca(llvm::Type::getInt1Ty(*TheContext),
+        //                                      nullptr, "if_op_result");
+        // break;
+    case INT_T:
+        if_op_result = TmpB.CreateAlloca(llvm::Type::getInt32Ty(*TheContext),
+                                         nullptr, "if_op_result_ptr");
+        break;
+    }
+
+    // Create blocks for the then and else cases
+    llvm::BasicBlock *ThenBB =
+        llvm::BasicBlock::Create(*TheContext, "if_then", TheFunction);
+    llvm::BasicBlock *ElseBB = llvm::BasicBlock::Create(*TheContext, "if_else");
+    llvm::BasicBlock *MergeBB =
+        llvm::BasicBlock::Create(*TheContext, "if_continued");
+
+    Builder->CreateCondBr(Cond, ThenBB, ElseBB);
+
+    // Emit then value
+    Builder->SetInsertPoint(ThenBB);
+    if (!Builder->CreateStore(yes->generate_llvm_ir(), if_op_result))
+        return nullptr;
+    Builder->CreateBr(MergeBB);
+
+    ThenBB = Builder->GetInsertBlock();
+    TheFunction->insert(TheFunction->end(), ElseBB);
+
+    // Emit else value
+    Builder->SetInsertPoint(ElseBB);
+    if (!Builder->CreateStore(no->generate_llvm_ir(), if_op_result))
+        return nullptr;
+    Builder->CreateBr(MergeBB);
+
+    // Emit merge value
+    ElseBB = Builder->GetInsertBlock();
+    TheFunction->insert(TheFunction->end(), MergeBB);
+    Builder->SetInsertPoint(MergeBB);
+
+    return Builder->CreateLoad(llvm::Type::getInt32Ty(*TheContext),
+                               if_op_result, "if_op_result");
 }
 
 llvm::Value *FunctionCall::generate_llvm_ir() {
@@ -174,6 +224,8 @@ llvm::Value *FunctionDef::generate_llvm_ir() {
         // Finish off the function.
         Builder->CreateRet(RetVal);
 
+        TheFunction->print(llvm::errs(), nullptr);
+
         // Validate the generated code, checking for consistency.
         assert(!verifyFunction(*TheFunction));
         return TheFunction;
@@ -193,6 +245,23 @@ int Compile(const std::string filename,
     TheContext = std::make_unique<llvm::LLVMContext>();
     TheModule = std::make_unique<llvm::Module>("LLVM JIT", *TheContext);
 
+    // Create a new pass manager attached to it.
+    TheFPM =
+        std::make_unique<llvm::legacy::FunctionPassManager>(TheModule.get());
+
+    // Do simple "peephole" optimizations and bit-twiddling optzns.
+    TheFPM->add(llvm::createInstructionCombiningPass());
+    // Re-associate expressions.
+    TheFPM->add(llvm::createReassociatePass());
+    // Eliminate Common SubExpressions.
+    TheFPM->add(llvm::createGVNPass());
+    // Simplify the control flow graph (deleting unreachable blocks, etc).
+    TheFPM->add(llvm::createCFGSimplificationPass());
+    // tail call optimization
+    TheFPM->add(llvm::createTailCallEliminationPass());
+
+    TheFPM->doInitialization();
+
     // Create a new builder for the module.
     Builder = std::make_unique<llvm::IRBuilder<>>(*TheContext);
 
@@ -208,7 +277,7 @@ int Compile(const std::string filename,
         i.second->generate_llvm_ir();
 
     // Print generated IR
-    // TheModule->print(llvm::errs(), nullptr);
+    TheModule->print(llvm::errs(), nullptr);
 
     // Getting target type
     std::string TargetTriple = llvm::sys::getDefaultTargetTriple();

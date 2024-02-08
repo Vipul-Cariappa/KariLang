@@ -268,7 +268,7 @@ std::variant<bool, int> FunctionCall::interpret(
         &functions_ast,
     std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
     std::unordered_map<std::string, std::variant<bool, int>> &context) {
-    // TODO: change context 's type to std::unique_ptr<Expression>
+    // TODO: change context's type to std::unique_ptr<Expression>
     //        that will automatically change to lazy evaluation of arguments
     std::unordered_map<std::string, std::variant<bool, int>> my_context;
     std::unique_ptr<FunctionDef> &func = functions_ast.at(function_name);

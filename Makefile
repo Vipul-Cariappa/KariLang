@@ -16,7 +16,6 @@ HEADER_FILES = \
   $(SRC_DIR)/Utils.hh \
   $(SRC_DIR)/AST.hh
 
-# TODO: use the below variable
 INCLUDE_OPTIONS = \
   -I$(SRC_DIR) \
   -I$(BUILD_DIR)
