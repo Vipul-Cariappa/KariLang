@@ -1,5 +1,7 @@
 #include "AST.hh"
 
+// Generate meaning full error messages with verify_semantics
+
 bool Expression::verify_semantics(
     TYPE result_type,
     std::unordered_map<std::string, std::unique_ptr<FunctionDef>>

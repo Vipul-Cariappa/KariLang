@@ -119,7 +119,8 @@ input: %empty
             }
         }
      | input value_definition { if (interpret) std::cout << ($2) << PROMPT; globals_ast.insert({($2)->name, std::move($2)}); }
-     | input function_definition { if (interpret) std::cout << ($2) << PROMPT; functions_ast.insert({($2)->name, std::move($2)}); };
+     | input function_definition { if (interpret) std::cout << ($2) << PROMPT; functions_ast.insert({($2)->name, std::move($2)}); }
+     | input error STATEMENT_END { if (interpret) {std::cout << PROMPT;} else { exit(1); } };
 
 function_definition: KW_FUNCDEF IDENTIFIER function_definition_arguments RETURN KW_BOOL ASSIGN expression STATEMENT_END { ($3)->set_info($2, BOOL_T, std::move($7)); $$ = std::move($3); }
                    | KW_FUNCDEF IDENTIFIER function_definition_arguments RETURN KW_INT ASSIGN expression STATEMENT_END { ($3)->set_info($2, INT_T, std::move($7)); $$ = std::move($3); };

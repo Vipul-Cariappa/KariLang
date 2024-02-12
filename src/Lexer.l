@@ -10,6 +10,7 @@
 %}
 
 %%
+"exit"                    { exit(0); /* TODO: exit more safely */ }
 "valdef"                  { return yy::parser::make_KW_VALDEF(loc); }
 "funcdef"                 { return yy::parser::make_KW_FUNCDEF(loc); }
 "bool"                    { return yy::parser::make_KW_BOOL(loc); }
