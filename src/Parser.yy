@@ -11,7 +11,7 @@
 %locations
 
 %param { int& num_errors }
-%param { bool interpret }
+%param { LANGUAGE_ACTION_TYPE comp_flags }
 %param { std::unordered_map<std::string, std::unique_ptr<FunctionDef>> &functions_ast }
 %param { std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast }
 
@@ -19,7 +19,7 @@
     #define YY_DECL \
         yy::parser::symbol_type yylex( \
             int& num_errors, \
-            bool compile, \
+            LANGUAGE_ACTION_TYPE comp_flags, \
             std::unordered_map<std::string, std::unique_ptr<FunctionDef>> &functions_ast, \
             std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast \
         )
@@ -34,6 +34,8 @@
     #include <variant>
     #include <unordered_map>
     #include "AST.hh"
+    #include "JIT.hh"
+    #include "Compile.hh"
 }
 
 %code {
@@ -99,7 +101,7 @@
 %%
 input: %empty
      | input expression STATEMENT_END { 
-            if (interpret) {
+            if (comp_flags == INTERPRET) {
                 std::unordered_map<std::string, std::variant<bool, int>> interpret_context;
                 std::unordered_map<std::string, TYPE> semantics_context;
                 /* TODO: use `semantics_verified` and `semantics_correct` */
@@ -114,13 +116,44 @@ input: %empty
                         std::cout << (std::get<bool>(res) ? "true" : "false") << PROMPT;
                     }
                 }
+            } else if (comp_flags == JIT) {
+                jit::JIT_Expression(std::move($2));
+                std::cout << PROMPT;
             } else {
                 std::cerr << "Cannot have expressions at top level\n";
             }
         }
-     | input value_definition { if (interpret) std::cout << ($2) << PROMPT; globals_ast.insert({($2)->name, std::move($2)}); }
-     | input function_definition { if (interpret) std::cout << ($2) << PROMPT; functions_ast.insert({($2)->name, std::move($2)}); }
-     | input error STATEMENT_END { if (interpret) {std::cout << PROMPT;} else { exit(1); } };
+     | input value_definition { 
+            if (comp_flags == INTERPRET)
+                std::cout << ($2) << PROMPT;
+            globals_ast.insert({($2)->name, std::move($2)});
+            if (comp_flags == JIT) {
+                ($2)->generate_llvm_ir();
+                ExitOnErr(TheJIT->addModule(llvm::orc::ThreadSafeModule(std::move(TheModule), std::move(TheContext))));
+                jit::jit();
+                std::cout << ($2) << PROMPT;
+            }
+        }
+     | input function_definition { 
+            if (comp_flags == INTERPRET)
+                std::cout << ($2) << PROMPT;
+            if (comp_flags == JIT) {
+                FunctionPrototype::generate_llvm_ir(($2)->name, ($2)->args_name,
+                                            ($2)->args_type,
+                                            ($2)->return_type);
+                ($2)->generate_llvm_ir();
+                ExitOnErr(TheJIT->addModule(llvm::orc::ThreadSafeModule(std::move(TheModule), std::move(TheContext))));
+                jit::jit();
+                std::cout << ($2) << PROMPT;
+            }
+            functions_ast.insert({($2)->name, std::move($2)});
+        }
+     | input error STATEMENT_END { 
+            if (comp_flags == INTERPRET)
+                std::cout << PROMPT;
+            else
+                exit(1);
+        };
 
 function_definition: KW_FUNCDEF IDENTIFIER function_definition_arguments RETURN KW_BOOL ASSIGN expression STATEMENT_END { ($3)->set_info($2, BOOL_T, std::move($7)); $$ = std::move($3); }
                    | KW_FUNCDEF IDENTIFIER function_definition_arguments RETURN KW_INT ASSIGN expression STATEMENT_END { ($3)->set_info($2, INT_T, std::move($7)); $$ = std::move($3); };
@@ -167,7 +200,7 @@ void yy::parser::error(const location_type& loc, const std::string& s) {
 }
 
 int parse(
-    std::string filename, bool interpret,
+    std::string filename, LANGUAGE_ACTION_TYPE comp_flags,
     std::unordered_map<std::string, std::unique_ptr<FunctionDef>> &functions_ast,
     std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast) {
     if (filename != "") {
@@ -180,7 +213,7 @@ int parse(
     }
 
     auto num_errors = 0;
-    yy::parser parser(num_errors, interpret, functions_ast, globals_ast);
+    yy::parser parser(num_errors, comp_flags, functions_ast, globals_ast);
     auto status = parser.parse();
     return status;
 }

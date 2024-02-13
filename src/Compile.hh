@@ -1,5 +1,6 @@
 #include "AST.hh"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include <map>
 #include <memory>
@@ -10,6 +11,7 @@ extern std::unique_ptr<llvm::LLVMContext> TheContext;
 extern std::unique_ptr<llvm::IRBuilder<>> Builder;
 extern std::unique_ptr<llvm::Module> TheModule;
 extern std::map<std::string, llvm::Value *> NamedValues;
+extern std::unique_ptr<llvm::legacy::FunctionPassManager> TheFPM;
 
 int Compile(const std::string filename,
             const std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
@@ -51,10 +53,10 @@ generate_llvm_ir(const std::string &name,
     // create the function prototype
     llvm::Function *F;
     if (name == "main")
-        F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, "____karilang_main",
-                                   TheModule.get());
+        F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage,
+                                   "____karilang_main", TheModule.get());
     else
-        F = llvm::Function::Create(FT, llvm::Function::InternalLinkage, name,
+        F = llvm::Function::Create(FT, llvm::Function::ExternalLinkage, name,
                                    TheModule.get());
 
     // setup argument names

@@ -10,11 +10,13 @@ PARSER_OUTPUT = $(BUILD_DIR)/Parser.tab.cc
 SOURCE_FILES = \
   $(SRC_DIR)/Main.cc \
   $(SRC_DIR)/AST.cc \
-  $(SRC_DIR)/Compile.cc
+  $(SRC_DIR)/Compile.cc \
+  $(SRC_DIR)/JIT.cc
 
 HEADER_FILES = \
   $(SRC_DIR)/Utils.hh \
-  $(SRC_DIR)/AST.hh
+  $(SRC_DIR)/AST.hh \
+  $(SRC_DIR)/JIT.hh
 
 INCLUDE_OPTIONS = \
   -I$(SRC_DIR) \

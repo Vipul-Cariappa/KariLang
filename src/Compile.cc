@@ -1,5 +1,6 @@
 #include "Compile.hh"
 #include "AST.hh"
+#include "Utils.hh"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -179,6 +180,13 @@ llvm::Value *IfOperator::generate_llvm_ir() {
 
 llvm::Value *FunctionCall::generate_llvm_ir() {
     llvm::Function *CalleeF = TheModule->getFunction(function_name);
+    // ???: below is required for JIT
+    auto f = functions_ast.find(function_name);
+    if ((!CalleeF) && (f != functions_ast.end())) {
+        CalleeF = FunctionPrototype::generate_llvm_ir(
+            f->second->name, f->second->args_name, f->second->args_type,
+            f->second->return_type);
+    }
 
     std::vector<llvm::Value *> ArgsV;
     for (size_t i = 0; i < args.size(); i++) {
@@ -224,10 +232,12 @@ llvm::Value *FunctionDef::generate_llvm_ir() {
         // Finish off the function.
         Builder->CreateRet(RetVal);
 
-        TheFunction->print(llvm::errs(), nullptr);
+        // TheFunction->print(llvm::errs(), nullptr);
 
         // Validate the generated code, checking for consistency.
         assert(!verifyFunction(*TheFunction));
+
+        TheFPM->run(*TheFunction);
         return TheFunction;
     }
 
@@ -243,7 +253,7 @@ int Compile(const std::string filename,
                 &globals_ast) {
     // Open a new context and module.
     TheContext = std::make_unique<llvm::LLVMContext>();
-    TheModule = std::make_unique<llvm::Module>("LLVM JIT", *TheContext);
+    TheModule = std::make_unique<llvm::Module>("LLVM Compiler", *TheContext);
 
     // Create a new pass manager attached to it.
     TheFPM =
@@ -277,7 +287,7 @@ int Compile(const std::string filename,
         i.second->generate_llvm_ir();
 
     // Print generated IR
-    TheModule->print(llvm::errs(), nullptr);
+    // TheModule->print(llvm::errs(), nullptr);
 
     // Getting target type
     std::string TargetTriple = llvm::sys::getDefaultTargetTriple();

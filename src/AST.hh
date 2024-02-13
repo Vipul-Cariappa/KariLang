@@ -10,6 +10,8 @@
 #include <variant>
 #include <vector>
 
+enum LANGUAGE_ACTION_TYPE { INTERPRET, COMPILE, JIT };
+
 enum EXPRESSION_TYPE {
     INTEGER_EXP,
     BOOLEAN_EXP,
