@@ -53,8 +53,26 @@ llvm::Value *Expression::generate_llvm_ir() {
     case BOOLEAN_EXP:
         return llvm::ConstantInt::get(
             *TheContext, llvm::APInt(1, std::get<bool>(value), false));
-    case VARIABLE_EXP:
-        return NamedValues[std::get<std::string>(value)];
+    case VARIABLE_EXP: {
+        if (NamedValues[std::get<std::string>(value)])
+            return NamedValues[std::get<std::string>(value)];
+
+        // all variables (except arguments for now) are no args function which
+        // return the datatype as the variable
+        llvm::Function *CalleeF =
+            TheModule->getFunction(std::get<std::string>(value));
+
+        // ???: below is required for JIT
+        auto f = globals_ast.find(std::get<std::string>(value));
+        if ((!CalleeF) && (f != globals_ast.end())) {
+            CalleeF = FunctionPrototype::generate_llvm_ir(f->second->name, {},
+                                                          {}, f->second->type);
+        }
+
+        std::vector<llvm::Value *> ArgsV;
+
+        return Builder->CreateCall(CalleeF, ArgsV, "variable_funccall");
+    }
     case UNARY_OP_EXP:
         return std::get<std::unique_ptr<UnaryOperator>>(value)
             ->generate_llvm_ir();
@@ -106,7 +124,6 @@ llvm::Value *BinaryOperator::generate_llvm_ir() {
     case OR_OP:
         return Builder->CreateOr(L, R, "or_op");
     case EQS_OP:;
-        // FIXME: the below ops should be converted to 1 bit result
         return Builder->CreateICmpEQ(L, R, "eqs_op");
     case NEQ_OP:
         return Builder->CreateICmpNE(L, R, "neq_op");
@@ -196,9 +213,42 @@ llvm::Value *FunctionCall::generate_llvm_ir() {
 }
 
 llvm::Value *ValueDef::generate_llvm_ir() {
-    // TODO: implement
-    std::cerr << "Not Implemented";
-    exit(1);
+    std::vector<llvm::Type *> ArgV;
+    llvm::FunctionType *FT;
+    switch (type) {
+    case TYPE::INT_T:
+        FT = llvm::FunctionType::get(llvm::Type::getInt32Ty(*TheContext), ArgV,
+                                     false);
+        break;
+    case TYPE::BOOL_T:
+        FT = llvm::FunctionType::get(llvm::Type::getInt1Ty(*TheContext), ArgV,
+                                     false);
+        break;
+    }
+    llvm::Function *TheFunction = llvm::Function::Create(
+        FT, llvm::Function::ExternalLinkage, name, TheModule.get());
+
+    // Create a new basic block to start insertion into.
+    llvm::BasicBlock *BB = llvm::BasicBlock::Create(
+        *TheContext, std::string(name) + "_entry", TheFunction);
+    Builder->SetInsertPoint(BB);
+
+    if (llvm::Value *RetVal = expression->generate_llvm_ir()) {
+        // Finish off the function.
+        Builder->CreateRet(RetVal);
+
+        // TheFunction->print(llvm::errs(), nullptr);
+
+        // Validate the generated code, checking for consistency.
+        assert(!verifyFunction(*TheFunction));
+
+        TheFPM->run(*TheFunction);
+        return TheFunction;
+    }
+
+    // Error reading body, remove function.
+    TheFunction->eraseFromParent();
+    return nullptr;
 }
 
 llvm::Value *FunctionDef::generate_llvm_ir() {

@@ -131,13 +131,13 @@ input: %empty
             if (($2)->verify_semantics(functions_ast, globals_ast)) {
                 if (comp_flags == INTERPRET)
                     std::cout << ($2) << PROMPT;
-                globals_ast.insert({($2)->name, std::move($2)});
                 if (comp_flags == JIT) {
                     ($2)->generate_llvm_ir();
                     ExitOnErr(TheJIT->addModule(llvm::orc::ThreadSafeModule(std::move(TheModule), std::move(TheContext))));
                     jit::jit();
                     std::cout << ($2) << PROMPT;
                 }
+                globals_ast.insert({($2)->name, std::move($2)});
             } else {
                 std::cerr << "Invalid semantics of the given variable\n" << PROMPT;
             }
