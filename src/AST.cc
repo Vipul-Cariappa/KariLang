@@ -1,6 +1,55 @@
 #include "AST.hh"
 
-// Generate meaning full error messages with verify_semantics
+#define GOOD_SEMANTICS(t)                                                      \
+    {                                                                          \
+        this->result_type = t;                                                 \
+        this->semantics_verified = true;                                       \
+        this->semantics_correct = true;                                        \
+        return true;                                                           \
+    }
+
+#define BAD_SEMANTICS_MSG(msg)                                                 \
+    {                                                                          \
+        std::cerr << "Semantic Error: " << msg << "\n";                        \
+        this->result_type = TYPE::INT_T;                                       \
+        this->semantics_verified = true;                                       \
+        this->semantics_correct = false;                                       \
+        return false;                                                          \
+    }
+
+#define BAD_SEMANTICS()                                                        \
+    {                                                                          \
+        this->result_type = TYPE::INT_T;                                       \
+        this->semantics_verified = true;                                       \
+        this->semantics_correct = false;                                       \
+        return false;                                                          \
+    }
+
+TYPE Expression::deduce_result_type() {
+    switch (type) {
+    case INTEGER_EXP:
+        return TYPE::INT_T;
+    case BOOLEAN_EXP:
+        return TYPE::BOOL_T;
+    case VARIABLE_EXP:
+        if (globals_ast.find(std::get<std::string>(value)) != globals_ast.end())
+            return globals_ast.at(std::get<std::string>(value))->type;
+        return TYPE::INT_T; /* Hopefully sematic verification will catch the
+                               error */
+    case UNARY_OP_EXP:
+        return std::get<std::unique_ptr<UnaryOperator>>(value)
+            ->deduce_result_type();
+    case BINARY_OP_EXP:
+        return std::get<std::unique_ptr<BinaryOperator>>(value)
+            ->deduce_result_type();
+    case IF_EXP:
+        return std::get<std::unique_ptr<IfOperator>>(value)
+            ->deduce_result_type();
+    case FUNCTION_CALL_EXP:
+        return std::get<std::unique_ptr<FunctionCall>>(value)
+            ->deduce_result_type();
+    }
+}
 
 bool Expression::verify_semantics(
     TYPE result_type,
@@ -11,35 +60,58 @@ bool Expression::verify_semantics(
     switch (type) {
     case INTEGER_EXP:
         if (result_type == TYPE::INT_T)
-            return true;
-        return false;
+            GOOD_SEMANTICS(result_type)
+        BAD_SEMANTICS_MSG("Expected type " << ToString(result_type)
+                                           << " but got int")
     case BOOLEAN_EXP:
         if (result_type == TYPE::BOOL_T)
-            return true;
-        return false;
+            GOOD_SEMANTICS(result_type)
+        BAD_SEMANTICS_MSG("Expected type " << ToString(result_type)
+                                           << " but got bool")
     case VARIABLE_EXP:
-        if ((globals_ast.find(std::get<std::string>(value)) !=
-             globals_ast.end()) &&
-            (globals_ast.at(std::get<std::string>(value))->type == result_type))
-            return true;
-        if ((context.find(std::get<std::string>(value)) != context.end()) &&
-            (context.at(std::get<std::string>(value)) == result_type))
-            return true;
-        return false;
+        if (globals_ast.find(std::get<std::string>(value)) !=
+            globals_ast.end()) {
+            if (globals_ast.at(std::get<std::string>(value))->type ==
+                result_type)
+                GOOD_SEMANTICS(result_type)
+            else
+                BAD_SEMANTICS_MSG(
+                    "Variable type "
+                    << ToString(
+                           globals_ast.at(std::get<std::string>(value))->type)
+                    << " but " << ToString(result_type) << "expected")
+        }
+        if (context.find(std::get<std::string>(value)) != context.end()) {
+            if (context.at(std::get<std::string>(value)) == result_type)
+                GOOD_SEMANTICS(result_type)
+            else
+                BAD_SEMANTICS_MSG(
+                    "Variable type "
+                    << ToString(context.at(std::get<std::string>(value)))
+                    << " but " << ToString(result_type) << "expected")
+        }
+        BAD_SEMANTICS_MSG("Could not find \"" << std::get<std::string>(value)
+                                              << "\" variable")
     case UNARY_OP_EXP:
-        return std::get<std::unique_ptr<UnaryOperator>>(value)
-            ->verify_semantics(result_type, functions_ast, globals_ast,
-                               context);
+        if (std::get<std::unique_ptr<UnaryOperator>>(value)->verify_semantics(
+                result_type, functions_ast, globals_ast, context))
+            GOOD_SEMANTICS(result_type);
+        BAD_SEMANTICS()
     case BINARY_OP_EXP:
-        return std::get<std::unique_ptr<BinaryOperator>>(value)
-            ->verify_semantics(result_type, functions_ast, globals_ast,
-                               context);
+        if (std::get<std::unique_ptr<BinaryOperator>>(value)->verify_semantics(
+                result_type, functions_ast, globals_ast, context))
+            GOOD_SEMANTICS(result_type);
+        BAD_SEMANTICS()
     case IF_EXP:
-        return std::get<std::unique_ptr<IfOperator>>(value)->verify_semantics(
-            result_type, functions_ast, globals_ast, context);
+        if (std::get<std::unique_ptr<IfOperator>>(value)->verify_semantics(
+                result_type, functions_ast, globals_ast, context))
+            GOOD_SEMANTICS(result_type);
+        BAD_SEMANTICS()
     case FUNCTION_CALL_EXP:
-        return std::get<std::unique_ptr<FunctionCall>>(value)->verify_semantics(
-            result_type, functions_ast, globals_ast, context);
+        if (std::get<std::unique_ptr<FunctionCall>>(value)->verify_semantics(
+                result_type, functions_ast, globals_ast, context))
+            GOOD_SEMANTICS(result_type);
+        BAD_SEMANTICS()
     }
 }
 
@@ -76,6 +148,15 @@ std::variant<bool, int> Expression::interpret(
     }
 }
 
+TYPE UnaryOperator::deduce_result_type() {
+    switch (op_type) {
+    case NOT_OP:
+        return TYPE::BOOL_T;
+    case NEG_OP:
+        return TYPE::INT_T;
+    }
+}
+
 bool UnaryOperator::verify_semantics(
     TYPE result_type,
     std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
@@ -84,15 +165,24 @@ bool UnaryOperator::verify_semantics(
     std::unordered_map<std::string, TYPE> &context) {
     switch (op_type) {
     case NOT_OP:
-        if (result_type == TYPE::BOOL_T)
-            return fst->verify_semantics(TYPE::BOOL_T, functions_ast,
-                                         globals_ast, context);
-        return false;
+        if (result_type == TYPE::BOOL_T) {
+            if (fst->verify_semantics(TYPE::BOOL_T, functions_ast, globals_ast,
+                                      context))
+                GOOD_SEMANTICS(result_type)
+            BAD_SEMANTICS()
+        }
+        BAD_SEMANTICS_MSG("Expected " << ToString(result_type)
+                                      << " but got bool (unary not operator)")
     case NEG_OP:
-        if (result_type == TYPE::INT_T)
-            return fst->verify_semantics(TYPE::INT_T, functions_ast,
-                                         globals_ast, context);
-        return false;
+        if (result_type == TYPE::INT_T) {
+            if (fst->verify_semantics(TYPE::INT_T, functions_ast, globals_ast,
+                                      context))
+                GOOD_SEMANTICS(result_type)
+            BAD_SEMANTICS()
+        }
+        BAD_SEMANTICS_MSG("Expected "
+                          << ToString(result_type)
+                          << " but got int (unary negation operator)")
     }
 }
 
@@ -113,6 +203,25 @@ std::variant<bool, int> UnaryOperator::interpret(
     }
 }
 
+TYPE BinaryOperator::deduce_result_type() {
+    switch (op_type) {
+    case ADD_OP:
+    case MUL_OP:
+    case DIV_OP:
+    case MOD_OP:
+        return TYPE::INT_T;
+    case AND_OP:
+    case OR_OP:
+    case EQS_OP:
+    case NEQ_OP:
+    case GT_OP:
+    case GTE_OP:
+    case LT_OP:
+    case LTE_OP:
+        return TYPE::BOOL_T;
+    }
+}
+
 bool BinaryOperator::verify_semantics(
     TYPE result_type,
     std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
@@ -124,26 +233,47 @@ bool BinaryOperator::verify_semantics(
     case MUL_OP:
     case DIV_OP:
     case MOD_OP:
-        if (result_type == TYPE::INT_T)
-            return fst->verify_semantics(TYPE::INT_T, functions_ast,
-                                         globals_ast, context);
-        return false;
+        if (result_type == TYPE::INT_T) {
+            if (fst->verify_semantics(TYPE::INT_T, functions_ast, globals_ast,
+                                      context) &&
+                snd->verify_semantics(TYPE::INT_T, functions_ast, globals_ast,
+                                      context))
+                GOOD_SEMANTICS(result_type)
+            BAD_SEMANTICS()
+        }
+        BAD_SEMANTICS_MSG("Expected "
+                          << ToString(result_type)
+                          << " but got int (binary arithmetic operator)")
     case AND_OP:
     case OR_OP:
-        if (result_type == TYPE::BOOL_T)
-            return fst->verify_semantics(TYPE::BOOL_T, functions_ast,
-                                         globals_ast, context);
-        return false;
+        if (result_type == TYPE::BOOL_T) {
+            if (fst->verify_semantics(TYPE::BOOL_T, functions_ast, globals_ast,
+                                      context) &&
+                snd->verify_semantics(TYPE::BOOL_T, functions_ast, globals_ast,
+                                      context))
+                GOOD_SEMANTICS(result_type)
+            BAD_SEMANTICS()
+        }
+        BAD_SEMANTICS_MSG("Expected "
+                          << ToString(result_type)
+                          << " but got bool (binary logical operator)")
     case EQS_OP:
     case NEQ_OP:
     case GT_OP:
     case GTE_OP:
     case LT_OP:
     case LTE_OP:
-        if (result_type == TYPE::BOOL_T)
-            return fst->verify_semantics(TYPE::INT_T, functions_ast,
-                                         globals_ast, context);
-        return false;
+        if (result_type == TYPE::BOOL_T) {
+            if (fst->verify_semantics(TYPE::INT_T, functions_ast, globals_ast,
+                                      context) &&
+                snd->verify_semantics(TYPE::INT_T, functions_ast, globals_ast,
+                                      context))
+                GOOD_SEMANTICS(result_type)
+            BAD_SEMANTICS()
+        }
+        BAD_SEMANTICS_MSG("Expected "
+                          << ToString(result_type)
+                          << " but got bool (binary comparision operator)")
     }
 }
 
@@ -216,19 +346,24 @@ std::variant<bool, int> BinaryOperator::interpret(
     }
 }
 
+TYPE IfOperator::deduce_result_type() { return yes->deduce_result_type(); }
+
 bool IfOperator::verify_semantics(
     TYPE result_type,
     std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
         &functions_ast,
     std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast,
     std::unordered_map<std::string, TYPE> &context) {
-    if (cond->verify_semantics(TYPE::INT_T, functions_ast, globals_ast,
-                               context))
-        return false;
-    return yes->verify_semantics(result_type, functions_ast, globals_ast,
-                                 context) &&
-           no->verify_semantics(result_type, functions_ast, globals_ast,
-                                context);
+    if (!cond->verify_semantics(TYPE::BOOL_T, functions_ast, globals_ast,
+                                context))
+        BAD_SEMANTICS_MSG("Condition does not yield a boolean value");
+    if (yes->verify_semantics(result_type, functions_ast, globals_ast,
+                              context) &&
+        no->verify_semantics(result_type, functions_ast, globals_ast, context))
+        GOOD_SEMANTICS(result_type)
+    BAD_SEMANTICS_MSG(
+        "Conditional branches does not yield the expected type of "
+        << ToString(result_type));
 }
 
 std::variant<bool, int> IfOperator::interpret(
@@ -241,6 +376,15 @@ std::variant<bool, int> IfOperator::interpret(
                : no->interpret(functions_ast, globals_ast, context);
 }
 
+TYPE FunctionCall::deduce_result_type() {
+    if (functions_ast.find(function_name) != functions_ast.end()) {
+        std::unique_ptr<FunctionDef> &func = functions_ast.at(function_name);
+        return func->return_type;
+    }
+    return TYPE::INT_T; /* Hopefully sematic verification will catch the error
+                         */
+}
+
 bool FunctionCall::verify_semantics(
     TYPE result_type,
     std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
@@ -250,19 +394,25 @@ bool FunctionCall::verify_semantics(
     if (functions_ast.find(function_name) != functions_ast.end()) {
         std::unique_ptr<FunctionDef> &func = functions_ast.at(function_name);
         if (func->args_type.size() != args.size())
-            return false;
+            BAD_SEMANTICS_MSG("Expected "
+                              << func->args_type.size()
+                              << " number of arguments but supplied "
+                              << args.size() << " arguments")
 
         if (func->return_type != result_type)
-            return false;
+            BAD_SEMANTICS_MSG("Expected return type to be "
+                              << ToString(result_type)
+                              << " but actual return type is "
+                              << ToString(func->return_type))
 
         for (size_t i = 0; i < args.size(); i++) {
             if (!args[i]->verify_semantics(func->args_type[i], functions_ast,
                                            globals_ast, context))
-                return false;
+                BAD_SEMANTICS_MSG("\t in function arguments");
         }
-        return true;
+        GOOD_SEMANTICS(result_type);
     }
-    return false;
+    BAD_SEMANTICS_MSG("Could not find \"" << function_name << "\" function")
 }
 
 std::variant<bool, int> FunctionCall::interpret(
@@ -287,7 +437,14 @@ bool ValueDef::verify_semantics(
         &functions_ast,
     std::unordered_map<std::string, std::unique_ptr<ValueDef>> &globals_ast) {
     std::unordered_map<std::string, TYPE> r;
-    return expression->verify_semantics(type, functions_ast, globals_ast, r);
+    if (expression->verify_semantics(type, functions_ast, globals_ast, r)) {
+        semantics_verified = true;
+        semantics_correct = true;
+        return true;
+    }
+    semantics_verified = true;
+    semantics_correct = false;
+    return false;
 }
 
 std::variant<bool, int> ValueDef::interpret(
@@ -307,8 +464,15 @@ bool FunctionDef::verify_semantics(
     for (size_t i = 0; i < args_name.size(); i++) {
         context.insert({args_name[i], args_type[i]});
     }
-    return expression->verify_semantics(return_type, functions_ast, globals_ast,
-                                        context);
+    if (expression->verify_semantics(return_type, functions_ast, globals_ast,
+                                     context)) {
+        semantics_verified = true;
+        semantics_correct = true;
+        return true;
+    }
+    semantics_verified = true;
+    semantics_correct = false;
+    return false;
 }
 
 std::variant<bool, int> FunctionDef::interpret(

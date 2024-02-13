@@ -101,6 +101,9 @@ class ValueDef {
     std::string name;
     std::unique_ptr<Expression> expression;
 
+    bool semantics_verified = false;
+    bool semantics_correct = false;
+
     inline ValueDef(TYPE type, std::string name,
                     std::unique_ptr<Expression> expression)
         : type(type), name(name), expression(std::move(expression)) {}
@@ -144,6 +147,9 @@ class FunctionDef {
     std::vector<std::string> args_name;
     std::vector<TYPE> args_type;
     std::unique_ptr<Expression> expression;
+
+    bool semantics_verified = false;
+    bool semantics_correct = false;
 
     inline FunctionDef() {}
 
@@ -194,9 +200,9 @@ class FunctionDef {
 
 class BaseExpression {
   public:
-    TYPE result_type; // TODO: use this, type of the computed result's type
-    bool semantics_verified = false; // TODO: use this
-    bool semantics_correct = false;  // TODO: use this
+    TYPE result_type; // type of the computed result
+    bool semantics_verified = false;
+    bool semantics_correct = false;
 
     inline virtual ~BaseExpression() = default;
     BaseExpression &operator=(BaseExpression &&other) = default;
@@ -215,6 +221,7 @@ class BaseExpression {
         std::unordered_map<std::string, std::variant<bool, int>> &context) = 0;
 
     virtual llvm::Value *generate_llvm_ir() = 0;
+    virtual TYPE deduce_result_type() = 0;
 };
 
 class UnaryOperator : public BaseExpression {
@@ -247,6 +254,7 @@ class UnaryOperator : public BaseExpression {
         std::unordered_map<std::string, std::variant<bool, int>> &context)
         override;
     virtual llvm::Value *generate_llvm_ir() override;
+    virtual TYPE deduce_result_type() override;
 };
 
 class BinaryOperator : public BaseExpression {
@@ -283,6 +291,7 @@ class BinaryOperator : public BaseExpression {
         std::unordered_map<std::string, std::variant<bool, int>> &context)
         override;
     virtual llvm::Value *generate_llvm_ir() override;
+    virtual TYPE deduce_result_type() override;
 };
 
 class IfOperator : public BaseExpression {
@@ -317,6 +326,7 @@ class IfOperator : public BaseExpression {
         std::unordered_map<std::string, std::variant<bool, int>> &context)
         override;
     virtual llvm::Value *generate_llvm_ir() override;
+    virtual TYPE deduce_result_type() override;
 };
 
 class FunctionCall : public BaseExpression {
@@ -364,6 +374,7 @@ class FunctionCall : public BaseExpression {
         std::unordered_map<std::string, std::variant<bool, int>> &context)
         override;
     virtual llvm::Value *generate_llvm_ir() override;
+    virtual TYPE deduce_result_type() override;
 };
 
 class Expression : public BaseExpression {
@@ -479,6 +490,7 @@ class Expression : public BaseExpression {
         std::unordered_map<std::string, std::variant<bool, int>> &context)
         override;
     virtual llvm::Value *generate_llvm_ir() override;
+    virtual TYPE deduce_result_type() override;
 };
 
 inline std::ostream &

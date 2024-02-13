@@ -18,13 +18,11 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
-#include <cstdio>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -62,6 +60,8 @@ int jit() {
 }
 
 void JIT_Expression(std::unique_ptr<Expression> exp) {
+    // TODO: verify semantics
+
     // Creating prototype
     // setup arguments type
     std::vector<llvm::Type *> ArgV;

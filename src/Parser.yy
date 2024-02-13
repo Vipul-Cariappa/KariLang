@@ -104,16 +104,20 @@ input: %empty
             if (comp_flags == INTERPRET) {
                 std::unordered_map<std::string, std::variant<bool, int>> interpret_context;
                 std::unordered_map<std::string, TYPE> semantics_context;
-                /* TODO: use `semantics_verified` and `semantics_correct` */
-                if (!((($2)->verify_semantics(INT_T, functions_ast, globals_ast, semantics_context)) || (($2)->verify_semantics(BOOL_T, functions_ast, globals_ast, semantics_context)))) {
+
+                TYPE result_type = ($2)->deduce_result_type();
+                if (!($2)->verify_semantics(result_type, functions_ast, globals_ast, semantics_context)) {
                     std::cerr << "Invalid semantics for the given expression\n" << PROMPT;
                 }
                 else {
                     std::variant<bool, int> res = ($2)->interpret(functions_ast, globals_ast, interpret_context);
-                    if (std::holds_alternative<int>(res)) {
-                        std::cout << std::get<int>(res) << PROMPT;
-                    } else {
-                        std::cout << (std::get<bool>(res) ? "true" : "false") << PROMPT;
+                    switch (result_type) {
+                        case INT_T:
+                            std::cout << std::get<int>(res) << PROMPT;
+                            break;
+                        case BOOL_T:
+                            std::cout << std::get<bool>(res) << PROMPT;
+                            break;
                     }
                 }
             } else if (comp_flags == JIT) {
@@ -124,29 +128,35 @@ input: %empty
             }
         }
      | input value_definition { 
-            if (comp_flags == INTERPRET)
-                std::cout << ($2) << PROMPT;
-            globals_ast.insert({($2)->name, std::move($2)});
-            if (comp_flags == JIT) {
-                ($2)->generate_llvm_ir();
-                ExitOnErr(TheJIT->addModule(llvm::orc::ThreadSafeModule(std::move(TheModule), std::move(TheContext))));
-                jit::jit();
-                std::cout << ($2) << PROMPT;
+            if (($2)->verify_semantics(functions_ast, globals_ast)) {
+                if (comp_flags == INTERPRET)
+                    std::cout << ($2) << PROMPT;
+                globals_ast.insert({($2)->name, std::move($2)});
+                if (comp_flags == JIT) {
+                    ($2)->generate_llvm_ir();
+                    ExitOnErr(TheJIT->addModule(llvm::orc::ThreadSafeModule(std::move(TheModule), std::move(TheContext))));
+                    jit::jit();
+                    std::cout << ($2) << PROMPT;
+                }
             }
+            std::cerr << "Invalid semantics of the given variable\n" << PROMPT;
         }
      | input function_definition { 
-            if (comp_flags == INTERPRET)
-                std::cout << ($2) << PROMPT;
-            if (comp_flags == JIT) {
-                FunctionPrototype::generate_llvm_ir(($2)->name, ($2)->args_name,
-                                            ($2)->args_type,
-                                            ($2)->return_type);
-                ($2)->generate_llvm_ir();
-                ExitOnErr(TheJIT->addModule(llvm::orc::ThreadSafeModule(std::move(TheModule), std::move(TheContext))));
-                jit::jit();
-                std::cout << ($2) << PROMPT;
+            if (($2)->verify_semantics(functions_ast, globals_ast)) {
+                if (comp_flags == INTERPRET)
+                    std::cout << ($2) << PROMPT;
+                if (comp_flags == JIT) {
+                    FunctionPrototype::generate_llvm_ir(($2)->name, ($2)->args_name,
+                                                ($2)->args_type,
+                                                ($2)->return_type);
+                    ($2)->generate_llvm_ir();
+                    ExitOnErr(TheJIT->addModule(llvm::orc::ThreadSafeModule(std::move(TheModule), std::move(TheContext))));
+                    jit::jit();
+                    std::cout << ($2) << PROMPT;
+                }
+                functions_ast.insert({($2)->name, std::move($2)});
             }
-            functions_ast.insert({($2)->name, std::move($2)});
+            std::cerr << "Invalid semantics of the given function\n" << PROMPT;
         }
      | input error STATEMENT_END { 
             if (comp_flags == INTERPRET)
