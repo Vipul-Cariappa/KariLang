@@ -116,7 +116,7 @@ input: %empty
                             std::cout << std::get<int>(res) << PROMPT;
                             break;
                         case BOOL_T:
-                            std::cout << std::get<bool>(res) << PROMPT;
+                            std::cout << (std::get<bool>(res) ? "true" : "false") << PROMPT;
                             break;
                     }
                 }
@@ -138,8 +138,9 @@ input: %empty
                     jit::jit();
                     std::cout << ($2) << PROMPT;
                 }
+            } else {
+                std::cerr << "Invalid semantics of the given variable\n" << PROMPT;
             }
-            std::cerr << "Invalid semantics of the given variable\n" << PROMPT;
         }
      | input function_definition { 
             if (($2)->verify_semantics(functions_ast, globals_ast)) {
@@ -155,8 +156,9 @@ input: %empty
                     std::cout << ($2) << PROMPT;
                 }
                 functions_ast.insert({($2)->name, std::move($2)});
+            } else {
+                std::cerr << "Invalid semantics of the given function\n" << PROMPT;
             }
-            std::cerr << "Invalid semantics of the given function\n" << PROMPT;
         }
      | input error STATEMENT_END { 
             if (comp_flags == INTERPRET)

@@ -133,12 +133,10 @@ llvm::Value *IfOperator::generate_llvm_ir() {
                            TheFunction->getEntryBlock().begin());
     llvm::AllocaInst *if_op_result;
     switch (result_type) {
-        // FIXME: result_type is not being updated anywhere
     case BOOL_T:
-        // if_op_result =
-        // Builder->CreateAlloca(llvm::Type::getInt1Ty(*TheContext),
-        //                                      nullptr, "if_op_result");
-        // break;
+        if_op_result = Builder->CreateAlloca(llvm::Type::getInt1Ty(*TheContext),
+                                             nullptr, "if_op_result");
+        break;
     case INT_T:
         if_op_result = TmpB.CreateAlloca(llvm::Type::getInt32Ty(*TheContext),
                                          nullptr, "if_op_result_ptr");

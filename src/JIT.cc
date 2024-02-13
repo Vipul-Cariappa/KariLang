@@ -60,7 +60,11 @@ int jit() {
 }
 
 void JIT_Expression(std::unique_ptr<Expression> exp) {
-    // TODO: verify semantics
+    TYPE expected_result_type = exp->deduce_result_type();
+    std::unordered_map<std::string, TYPE> semantics_context;
+    if (!exp->verify_semantics(expected_result_type, functions_ast, globals_ast,
+                               semantics_context))
+        return;
 
     // Creating prototype
     // setup arguments type
@@ -70,10 +74,9 @@ void JIT_Expression(std::unique_ptr<Expression> exp) {
     llvm::FunctionType *FT;
     switch (exp->result_type) {
     case TYPE::BOOL_T:
-    //     FT = llvm::FunctionType::get(llvm::Type::getInt1Ty(*TheContext),
-    //     ArgV,
-    //                                  false);
-    //     break;
+        FT = llvm::FunctionType::get(llvm::Type::getInt1Ty(*TheContext), ArgV,
+                                     false);
+        break;
     case TYPE::INT_T:
     default:
         FT = llvm::FunctionType::get(llvm::Type::getInt32Ty(*TheContext), ArgV,
@@ -111,8 +114,18 @@ void JIT_Expression(std::unique_ptr<Expression> exp) {
 
     // Get the symbol's address and cast it to the right type (takes no
     // arguments, returns a double) so we can call it as a native function.
-    int (*FP)() = ExprSymbol.getAddress().toPtr<int (*)()>();
-    std::cout << FP() << "\n";
+    switch (exp->result_type) {
+    case INT_T: {
+        int (*FP)() = ExprSymbol.getAddress().toPtr<int (*)()>();
+        std::cout << FP() << "\n";
+        break;
+    }
+    case BOOL_T: {
+        bool (*FP)() = ExprSymbol.getAddress().toPtr<bool (*)()>();
+        std::cout << (FP() ? "true" : "false") << "\n";
+        break;
+    }
+    }
 
     // Delete the anonymous expression module from the JIT.
     ExitOnErr(RT->remove());
