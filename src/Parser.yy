@@ -25,17 +25,13 @@
         )
 
     YY_DECL;
-
-    #define PROMPT std::endl << ">>> "
 }
 
 %code requires {
     #include <iostream>
     #include <variant>
     #include <unordered_map>
-    #include "AST.hh"
-    #include "JIT.hh"
-    #include "Compile.hh"
+    #include "Parser.hh"
 }
 
 %code {
@@ -100,68 +96,11 @@
 
 %%
 input: %empty
-     | input expression STATEMENT_END { 
-            if (comp_flags == INTERPRET) {
-                std::unordered_map<std::string, std::variant<bool, int>> interpret_context;
-                std::unordered_map<std::string, TYPE> semantics_context;
-
-                TYPE result_type = ($2)->deduce_result_type();
-                if (!($2)->verify_semantics(result_type, functions_ast, globals_ast, semantics_context)) {
-                    std::cerr << "Invalid semantics for the given expression\n" << PROMPT;
-                }
-                else {
-                    std::variant<bool, int> res = ($2)->interpret(functions_ast, globals_ast, interpret_context);
-                    switch (result_type) {
-                        case INT_T:
-                            std::cout << std::get<int>(res) << PROMPT;
-                            break;
-                        case BOOL_T:
-                            std::cout << (std::get<bool>(res) ? "true" : "false") << PROMPT;
-                            break;
-                    }
-                }
-            } else if (comp_flags == JIT) {
-                jit::JIT_Expression(std::move($2));
-                std::cout << PROMPT;
-            } else {
-                std::cerr << "Cannot have expressions at top level\n";
-            }
-        }
-     | input value_definition { 
-            if (($2)->verify_semantics(functions_ast, globals_ast)) {
-                if (comp_flags == INTERPRET)
-                    std::cout << ($2) << PROMPT;
-                if (comp_flags == JIT) {
-                    ($2)->generate_llvm_ir();
-                    ExitOnErr(TheJIT->addModule(llvm::orc::ThreadSafeModule(std::move(TheModule), std::move(TheContext))));
-                    jit::jit();
-                    std::cout << ($2) << PROMPT;
-                }
-                globals_ast.insert({($2)->name, std::move($2)});
-            } else {
-                std::cerr << "Invalid semantics of the given variable\n" << PROMPT;
-            }
-        }
-     | input function_definition { 
-            if (($2)->verify_semantics(functions_ast, globals_ast)) {
-                if (comp_flags == INTERPRET)
-                    std::cout << ($2) << PROMPT;
-                if (comp_flags == JIT) {
-                    FunctionPrototype::generate_llvm_ir(($2)->name, ($2)->args_name,
-                                                ($2)->args_type,
-                                                ($2)->return_type);
-                    ($2)->generate_llvm_ir();
-                    ExitOnErr(TheJIT->addModule(llvm::orc::ThreadSafeModule(std::move(TheModule), std::move(TheContext))));
-                    jit::jit();
-                    std::cout << ($2) << PROMPT;
-                }
-                functions_ast.insert({($2)->name, std::move($2)});
-            } else {
-                std::cerr << "Invalid semantics of the given function\n" << PROMPT;
-            }
-        }
+     | input expression STATEMENT_END { handle_expressions(comp_flags, std::move($2)); }
+     | input value_definition { handle_valdef(comp_flags, std::move($2)); }
+     | input function_definition { handle_funcdef(comp_flags, std::move($2)); }
      | input error STATEMENT_END { 
-            if (comp_flags == INTERPRET)
+            if (comp_flags & KARILANG_INTERACTIVE)
                 std::cout << PROMPT;
             else
                 exit(1);

@@ -60,12 +60,6 @@ int jit() {
 }
 
 void JIT_Expression(std::unique_ptr<Expression> exp) {
-    TYPE expected_result_type = exp->deduce_result_type();
-    std::unordered_map<std::string, TYPE> semantics_context;
-    if (!exp->verify_semantics(expected_result_type, functions_ast, globals_ast,
-                               semantics_context))
-        return;
-
     // Creating prototype
     // setup arguments type
     std::vector<llvm::Type *> ArgV;

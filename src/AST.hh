@@ -10,8 +10,6 @@
 #include <variant>
 #include <vector>
 
-enum LANGUAGE_ACTION_TYPE { INTERPRET, COMPILE, JIT };
-
 enum EXPRESSION_TYPE {
     INTEGER_EXP,
     BOOLEAN_EXP,
@@ -162,7 +160,8 @@ class FunctionDef {
         for (size_t i = 0; i < m.args_name.size(); i++) {
             os << " " << m.args_name[i] << ": " << m.args_type[i];
         }
-        os << " -> " << ToString(m.return_type) << " " << m.expression << ";";
+        os << " -> " << ToString(m.return_type) << " =\n\t" << m.expression
+           << ";";
         return os;
     }
 

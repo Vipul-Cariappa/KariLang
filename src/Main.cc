@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
     int status;
 
     if ((argc == 3) && (std::string(argv[2]) == "-c")) {
-        status = parse(argv[1], COMPILE, functions_ast, globals_ast);
+        status = parse(argv[1], LANGUAGE_ACTION_TYPE::COMPILE_FILE, functions_ast, globals_ast);
     } else if ((argc == 2) && ((std::string(argv[1]) == "-jit") ||
                                (std::string(argv[1]) == "--jit"))) {
         llvm::InitializeNativeTarget();
@@ -35,10 +35,10 @@ int main(int argc, char *argv[]) {
         TheJIT = ExitOnErr(KariLangJIT::Create());
         jit::jit();
         std::cout << ">>> ";
-        return parse("", JIT, functions_ast, globals_ast);
+        return parse("", LANGUAGE_ACTION_TYPE::INTERACTIVE_COMPILE, functions_ast, globals_ast);
     } else if (argc == 1) {
         std::cout << ">>> ";
-        return parse("", INTERPRET, functions_ast, globals_ast);
+        return parse("", LANGUAGE_ACTION_TYPE::INTERACTIVE_INTERPRET, functions_ast, globals_ast);
     } else {
         std::cerr << "File and input required to execute the program\n";
         std::cerr << "Or pass \"-c\" flag to compile\n";

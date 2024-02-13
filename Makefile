@@ -16,7 +16,8 @@ SOURCE_FILES = \
 HEADER_FILES = \
   $(SRC_DIR)/Utils.hh \
   $(SRC_DIR)/AST.hh \
-  $(SRC_DIR)/JIT.hh
+  $(SRC_DIR)/JIT.hh \
+  $(SRC_DIR)/Parser.hh
 
 INCLUDE_OPTIONS = \
   -I$(SRC_DIR) \
