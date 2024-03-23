@@ -342,12 +342,10 @@ int Compile(const std::string filename,
     // std::cout << TargetTriple << std::endl;
 
     // Initializing target
-    llvm::InitializeAllTargetInfos();
-    llvm::InitializeAllTargets();
-    llvm::InitializeAllTargetMCs();
-    llvm::InitializeAllAsmParsers();
-    llvm::InitializeAllAsmPrinters();
-
+    llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmParser();
+    llvm::InitializeNativeTargetAsmPrinter();
+    
     std::string Error;
     const llvm::Target *Target =
         llvm::TargetRegistry::lookupTarget(TargetTriple, Error);
