@@ -1,8 +1,10 @@
 #include "Compile.hh"
 #include "AST.hh"
 #include "Utils.hh"
+#include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -39,21 +41,46 @@ std::unique_ptr<llvm::IRBuilder<>> Builder;
 std::unique_ptr<llvm::Module> TheModule;
 std::map<std::string, llvm::Value *> NamedValues;
 std::unique_ptr<llvm::legacy::FunctionPassManager> TheFPM;
+std::unique_ptr<llvm::DIBuilder> DBuilder;
+DebugInfo KLDbgInfo;
 
 llvm::Value *LogErrorV(const char *str) {
     std::cerr << str;
     return nullptr;
 }
 
+void DebugInfo::emitLocation(BaseExpression *AST) {
+    if (!AST)
+        return Builder->SetCurrentDebugLocation(llvm::DebugLoc());
+    llvm::DIScope *Scope;
+    if (LexicalBlocks.empty())
+        Scope = TheCU;
+    else
+        Scope = LexicalBlocks.back();
+    Builder->SetCurrentDebugLocation(llvm::DILocation::get(
+        Scope->getContext(), AST->start_line, AST->start_column, Scope));
+}
+
+static llvm::AllocaInst *CreateEntryBlockAlloca(llvm::Function *TheFunction,
+                                                llvm::StringRef VarName) {
+    llvm::IRBuilder<> TmpB(&TheFunction->getEntryBlock(),
+                           TheFunction->getEntryBlock().begin());
+    return TmpB.CreateAlloca(NamedValues.at(VarName.str())->getType(), nullptr,
+                             VarName);
+}
+
 llvm::Value *Expression::generate_llvm_ir() {
     switch (type) {
     case INTEGER_EXP:
+        KLDbgInfo.emitLocation(this);
         return llvm::ConstantInt::get(
             *TheContext, llvm::APInt(32, std::get<int>(value), true));
     case BOOLEAN_EXP:
+        KLDbgInfo.emitLocation(this);
         return llvm::ConstantInt::get(
             *TheContext, llvm::APInt(1, std::get<bool>(value), false));
     case VARIABLE_EXP: {
+        KLDbgInfo.emitLocation(this);
         if (NamedValues[std::get<std::string>(value)])
             return NamedValues[std::get<std::string>(value)];
 
@@ -88,6 +115,7 @@ llvm::Value *Expression::generate_llvm_ir() {
 }
 
 llvm::Value *UnaryOperator::generate_llvm_ir() {
+    KLDbgInfo.emitLocation(this);
     llvm::Value *L = fst->generate_llvm_ir();
     if (!L)
         return nullptr;
@@ -105,6 +133,7 @@ llvm::Value *UnaryOperator::generate_llvm_ir() {
 }
 
 llvm::Value *BinaryOperator::generate_llvm_ir() {
+    KLDbgInfo.emitLocation(this);
     llvm::Value *L = fst->generate_llvm_ir();
     llvm::Value *R = snd->generate_llvm_ir();
     if ((!L) || (!R))
@@ -139,6 +168,7 @@ llvm::Value *BinaryOperator::generate_llvm_ir() {
 }
 
 llvm::Value *IfOperator::generate_llvm_ir() {
+    KLDbgInfo.emitLocation(this);
     llvm::Value *Cond = cond->generate_llvm_ir();
     if (!Cond)
         return nullptr;
@@ -203,6 +233,8 @@ llvm::Value *FunctionCall::generate_llvm_ir() {
             f->second->return_type);
     }
 
+    KLDbgInfo.emitLocation(this);
+
     std::vector<llvm::Value *> ArgsV;
     for (size_t i = 0; i < args.size(); i++) {
         ArgsV.push_back(args.at(i)->generate_llvm_ir());
@@ -213,6 +245,8 @@ llvm::Value *FunctionCall::generate_llvm_ir() {
 }
 
 llvm::Value *ValueDef::generate_llvm_ir() {
+    // TODO: add debug info
+
     std::vector<llvm::Type *> ArgV;
     llvm::FunctionType *FT;
     switch (type) {
@@ -242,7 +276,7 @@ llvm::Value *ValueDef::generate_llvm_ir() {
         // Validate the generated code, checking for consistency.
         assert(!verifyFunction(*TheFunction));
 
-        TheFPM->run(*TheFunction);
+        // TheFPM->run(*TheFunction);
         return TheFunction;
     }
 
@@ -254,9 +288,11 @@ llvm::Value *ValueDef::generate_llvm_ir() {
 llvm::Value *FunctionDef::generate_llvm_ir() {
     // First, check for an existing function
     llvm::Function *TheFunction;
-    if (name == "main")
+    std::string name = this->name;
+    if (name == "main") {
         TheFunction = TheModule->getFunction("____karilang_main");
-    else
+        name = "____karilang_main";
+    } else
         TheFunction = TheModule->getFunction(name);
 
     if (!TheFunction)
@@ -266,15 +302,80 @@ llvm::Value *FunctionDef::generate_llvm_ir() {
     if (!TheFunction->empty())
         return (llvm::Function *)LogErrorV("Function cannot be redefined");
 
+    /* DEBUG INFO START */
+    // Create a subprogram DIE for this function.
+    std::vector<llvm::Metadata *> DArgV;
+    // setup return type
+    switch (return_type) {
+    case TYPE::INT_T:
+        DArgV.push_back(KLDbgInfo.getIntTy());
+        break;
+    case TYPE::BOOL_T:
+        DArgV.push_back(KLDbgInfo.getBoolTy());
+        break;
+    }
+    // setup arguments type
+    for (size_t i = 0; i < args_name.size(); i++) {
+        switch (args_type.at(i)) {
+        case TYPE::INT_T:
+            DArgV.push_back(KLDbgInfo.getIntTy());
+            break;
+        case TYPE::BOOL_T:
+            DArgV.push_back(KLDbgInfo.getBoolTy());
+            break;
+        }
+    }
+    llvm::DISubroutineType *DFunctionType =
+        DBuilder->createSubroutineType(DBuilder->getOrCreateTypeArray(DArgV));
+
+    llvm::DIFile *Unit = DBuilder->createFile(KLDbgInfo.TheCU->getFilename(),
+                                              KLDbgInfo.TheCU->getDirectory());
+    /* DEBUG INFO END */
+
     // Create a new basic block to start insertion into.
     llvm::BasicBlock *BB = llvm::BasicBlock::Create(
         *TheContext, std::string(name) + "_entry", TheFunction);
     Builder->SetInsertPoint(BB);
 
+    llvm::DIScope *FContext = Unit;
+    unsigned LineNo = start_line;
+    unsigned ScopeLine = LineNo;
+    llvm::DISubprogram *SP = DBuilder->createFunction(
+        FContext, name, llvm::StringRef(), Unit, LineNo, DFunctionType,
+        ScopeLine, llvm::DINode::FlagPrototyped,
+        llvm::DISubprogram::SPFlagDefinition);
+    TheFunction->setSubprogram(SP);
+
+    KLDbgInfo.LexicalBlocks.push_back(SP);
+
+    KLDbgInfo.emitLocation(nullptr);
+
     // Record the function arguments in the NamedValues map.
     NamedValues.clear();
-    for (auto &Arg : TheFunction->args())
+    unsigned ArgIdx = 0;
+    for (auto &Arg : TheFunction->args()) {
         NamedValues[std::string(Arg.getName())] = &Arg;
+        ++ArgIdx;
+
+        // Create an alloca for this variable.
+        llvm::AllocaInst *Alloca =
+            CreateEntryBlockAlloca(TheFunction, Arg.getName());
+
+        // Create a debug descriptor for the variable.
+        llvm::DILocalVariable *D = DBuilder->createParameterVariable(
+            SP, Arg.getName(), ArgIdx, Unit, LineNo,
+            static_cast<llvm::DIType *>(DArgV.at(ArgIdx)), true);
+
+        DBuilder->insertDeclare(
+            Alloca, D, DBuilder->createExpression(),
+            llvm::DILocation::get(SP->getContext(), LineNo, 0, SP),
+            Builder->GetInsertBlock());
+
+        // Store the initial value into the alloca.
+        Builder->CreateStore(&Arg, Alloca);
+    }
+
+    KLDbgInfo.emitLocation(expression.get());
 
     if (llvm::Value *RetVal = expression->generate_llvm_ir()) {
         // Finish off the function.
@@ -282,15 +383,19 @@ llvm::Value *FunctionDef::generate_llvm_ir() {
 
         // TheFunction->print(llvm::errs(), nullptr);
 
+        KLDbgInfo.LexicalBlocks.pop_back();
+
         // Validate the generated code, checking for consistency.
         assert(!verifyFunction(*TheFunction));
 
-        TheFPM->run(*TheFunction);
+        // TheFPM->run(*TheFunction);
         return TheFunction;
     }
 
     // Error reading body, remove function.
     TheFunction->eraseFromParent();
+    KLDbgInfo.LexicalBlocks.pop_back();
+
     return nullptr;
 }
 
@@ -303,25 +408,32 @@ int Compile(const std::string filename,
     TheContext = std::make_unique<llvm::LLVMContext>();
     TheModule = std::make_unique<llvm::Module>("LLVM Compiler", *TheContext);
 
-    // Create a new pass manager attached to it.
-    TheFPM =
-        std::make_unique<llvm::legacy::FunctionPassManager>(TheModule.get());
+    // // Create a new pass manager attached to it.
+    // TheFPM =
+    //     std::make_unique<llvm::legacy::FunctionPassManager>(TheModule.get());
 
-    // Do simple "peephole" optimizations and bit-twiddling optzns.
-    TheFPM->add(llvm::createInstructionCombiningPass());
-    // Re-associate expressions.
-    TheFPM->add(llvm::createReassociatePass());
-    // Eliminate Common SubExpressions.
-    TheFPM->add(llvm::createGVNPass());
-    // Simplify the control flow graph (deleting unreachable blocks, etc).
-    TheFPM->add(llvm::createCFGSimplificationPass());
-    // tail call optimization
-    TheFPM->add(llvm::createTailCallEliminationPass());
+    // // Do simple "peephole" optimizations and bit-twiddling optzns.
+    // TheFPM->add(llvm::createInstructionCombiningPass());
+    // // Re-associate expressions.
+    // TheFPM->add(llvm::createReassociatePass());
+    // // Eliminate Common SubExpressions.
+    // TheFPM->add(llvm::createGVNPass());
+    // // Simplify the control flow graph (deleting unreachable blocks, etc).
+    // TheFPM->add(llvm::createCFGSimplificationPass());
+    // // tail call optimization
+    // TheFPM->add(llvm::createTailCallEliminationPass());
 
-    TheFPM->doInitialization();
+    // TheFPM->doInitialization();
 
     // Create a new builder for the module.
     Builder = std::make_unique<llvm::IRBuilder<>>(*TheContext);
+
+    // Creating Debug builder
+    DBuilder = std::make_unique<llvm::DIBuilder>(*TheModule);
+
+    KLDbgInfo.TheCU = DBuilder->createCompileUnit(
+        llvm::dwarf::DW_LANG_hi_user, DBuilder->createFile(filename, "."),
+        "Kaleidoscope Compiler", false, "", 0);
 
     // Generate LLVM IR
     for (auto &i : functions_ast)
@@ -333,9 +445,6 @@ int Compile(const std::string filename,
         i.second->generate_llvm_ir();
     for (auto &i : globals_ast)
         i.second->generate_llvm_ir();
-
-    // Print generated IR
-    // TheModule->print(llvm::errs(), nullptr);
 
     // Getting target type
     std::string TargetTriple = llvm::sys::getDefaultTargetTriple();
@@ -382,6 +491,13 @@ int Compile(const std::string filename,
     }
 
     pass.run(*TheModule);
+    
+    // Write all debug info
+    DBuilder->finalize();
+
+    // Print generated IR
+    TheModule->print(llvm::errs(), nullptr);
+    
     dest.flush();
 
     return 0;

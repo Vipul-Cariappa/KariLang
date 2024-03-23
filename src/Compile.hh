@@ -2,6 +2,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/DIBuilder.h"
 #include <map>
 #include <memory>
 #include <string>
@@ -12,6 +13,35 @@ extern std::unique_ptr<llvm::IRBuilder<>> Builder;
 extern std::unique_ptr<llvm::Module> TheModule;
 extern std::map<std::string, llvm::Value *> NamedValues;
 extern std::unique_ptr<llvm::legacy::FunctionPassManager> TheFPM;
+extern std::unique_ptr<llvm::DIBuilder> DBuilder;
+
+typedef struct {
+  llvm::DICompileUnit *TheCU;
+  llvm::DIType *IntTy;
+  llvm::DIType *BoolTy;
+  llvm::DIType *getIntTy();
+  llvm::DIType *getBoolTy();
+  std::vector<llvm::DIScope *> LexicalBlocks;
+  void emitLocation(BaseExpression *AST);
+} DebugInfo;
+
+extern DebugInfo KLDbgInfo;
+
+inline llvm::DIType *DebugInfo::getIntTy() {
+  if (IntTy)
+    return IntTy;
+
+  IntTy = DBuilder->createBasicType("int", 32, llvm::dwarf::DW_ATE_signed);
+  return IntTy;
+}
+
+inline llvm::DIType *DebugInfo::getBoolTy() {
+  if (BoolTy)
+    return BoolTy;
+
+  BoolTy = DBuilder->createBasicType("bool", 1, llvm::dwarf::DW_ATE_boolean);
+  return BoolTy;
+}
 
 int Compile(const std::string filename,
             const std::unordered_map<std::string, std::unique_ptr<FunctionDef>>
