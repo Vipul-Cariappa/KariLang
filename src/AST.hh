@@ -23,6 +23,7 @@ enum EXPRESSION_TYPE {
 enum TYPE {
     BOOL_T,
     INT_T,
+    NAN_T,
 };
 
 inline std::string ToString(TYPE type) {
@@ -102,6 +103,11 @@ class ValueDef {
     bool semantics_verified = false;
     bool semantics_correct = false;
 
+    int start_line;
+    int start_column;
+    int end_line;
+    int end_column;
+
     inline ValueDef(TYPE type, std::string name,
                     std::unique_ptr<Expression> expression)
         : type(type), name(name), expression(std::move(expression)) {}
@@ -148,6 +154,11 @@ class FunctionDef {
 
     bool semantics_verified = false;
     bool semantics_correct = false;
+
+    int start_line;
+    int start_column;
+    int end_line;
+    int end_column;
 
     inline FunctionDef() {}
 
@@ -202,6 +213,11 @@ class BaseExpression {
     TYPE result_type; // type of the computed result
     bool semantics_verified = false;
     bool semantics_correct = false;
+
+    int start_line;
+    int start_column;
+    int end_line;
+    int end_column;
 
     inline virtual ~BaseExpression() = default;
     BaseExpression &operator=(BaseExpression &&other) = default;
@@ -332,6 +348,11 @@ class FunctionCall : public BaseExpression {
   public:
     std::string function_name;
     std::vector<std::unique_ptr<Expression>> args;
+
+    int start_line;
+    int start_column;
+    int end_line;
+    int end_column;
 
     inline FunctionCall() {}
 

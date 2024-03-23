@@ -37,6 +37,26 @@
 %code {
     #include <stdio.h>
     extern FILE *yyin;
+        
+        /*
+        std::cout << l.begin.line << "."    \
+        << l.begin.column << "-"            \
+        << l.end.line << "."                \
+        << l.end.column << std::endl;       \
+        */
+        
+    #define SET_LOCATION(t, l)              \
+        t->start_line = l.begin.line;       \
+        t->start_column = l.begin.column;   \
+        t->end_line = l.end.line;           \
+        t->end_column = l.end.column;
+    
+    #define SET_LOCATION_VALUE(t, l)        \
+        t.start_line = l.begin.line;       \
+        t.start_column = l.begin.column;   \
+        t.end_line = l.end.line;           \
+        t.end_column = l.end.column;
+
 }
 
 %printer { yyo << $$; } <int>;
@@ -97,8 +117,8 @@
 %%
 input: %empty
      | input expression STATEMENT_END { handle_expressions(comp_flags, std::move($2)); }
-     | input value_definition { handle_valdef(comp_flags, std::move($2)); }
-     | input function_definition { handle_funcdef(comp_flags, std::move($2)); }
+     | input value_definition { SET_LOCATION($2, @2); handle_valdef(comp_flags, std::move($2)); }
+     | input function_definition { SET_LOCATION($2, @2); handle_funcdef(comp_flags, std::move($2)); }
      | input error STATEMENT_END { 
             if (comp_flags & KARILANG_INTERACTIVE)
                 std::cout << PROMPT;
@@ -118,29 +138,29 @@ function_definition_arguments: IDENTIFIER TYPE_OF KW_BOOL { $$ = FunctionDef::fr
 value_definition: KW_VALDEF IDENTIFIER TYPE_OF KW_BOOL ASSIGN expression STATEMENT_END { $$ = ValueDef::from(BOOL_T, $2, std::move($6)); }
                 | KW_VALDEF IDENTIFIER TYPE_OF KW_INT ASSIGN expression STATEMENT_END { $$ = ValueDef::from(INT_T, $2, std::move($6)); };
 
-basic_expression: IDENTIFIER { $$ = Expression::from($1); }
-                | INTEGER { $$ = Expression::from($1); }
-                | KW_TRUE { $$ = Expression::from(true); }
-                | KW_FALSE { $$ = Expression::from(false); }
-                | OPEN_BRACKETS expression CLOSE_BRACKETS { $$ = std::move($2); };
+basic_expression: IDENTIFIER { $$ = Expression::from($1); SET_LOCATION($$, @$); }
+                | INTEGER { $$ = Expression::from($1); SET_LOCATION($$, @$); }
+                | KW_TRUE { $$ = Expression::from(true); SET_LOCATION($$, @$); }
+                | KW_FALSE { $$ = Expression::from(false); SET_LOCATION($$, @$); }
+                | OPEN_BRACKETS expression CLOSE_BRACKETS { $$ = std::move($2); SET_LOCATION($$, @$); };
 
-expression: basic_expression { $$ = std::move($1); }
-          | AND basic_expression basic_expression { $$ = Expression::from(std::move($2), std::move($3), AND_OP); }
-          | OR basic_expression basic_expression { $$ = Expression::from(std::move($2), std::move($3), OR_OP); }
-          | NOT basic_expression { $$ = Expression::from(std::move($2), NOT_OP); }
-          | PLUS basic_expression basic_expression { $$ = Expression::from(std::move($2), std::move($3), ADD_OP); }
-          | MULTIPLY basic_expression basic_expression { $$ = Expression::from(std::move($2), std::move($3), MUL_OP); }
-          | DIVIDE basic_expression basic_expression { $$ = Expression::from(std::move($2), std::move($3), DIV_OP); }
-          | MODULO basic_expression basic_expression { $$ = Expression::from(std::move($2), std::move($3), MOD_OP); }
-          | MINUS basic_expression { $$ = Expression::from(std::move($2), NEG_OP); }
-          | EQUALS basic_expression basic_expression { $$ = Expression::from(std::move($2), std::move($3), EQS_OP); }
-          | NOT_EQUALS basic_expression basic_expression { $$ = Expression::from(std::move($2), std::move($3), NEQ_OP); }
-          | GREATER basic_expression basic_expression { $$ = Expression::from(std::move($2), std::move($3), GT_OP); }
-          | GREATER_EQUALS basic_expression basic_expression { $$ = Expression::from(std::move($2), std::move($3), GTE_OP); }
-          | LESSER basic_expression basic_expression { $$ = Expression::from(std::move($2), std::move($3), LT_OP); }
-          | LESSER_EQUALS basic_expression basic_expression { $$ = Expression::from(std::move($2), std::move($3), LTE_OP); }
-          | KW_IF expression KW_THEN expression KW_ELSE expression { $$ = Expression::from(std::move($2), std::move($4), std::move($6)); }
-          | IDENTIFIER function_call_arguments { ($2).set_function_name($1); $$ = Expression::from(std::move($2)); };
+expression: basic_expression { $$ = std::move($1); SET_LOCATION($$, @$); }
+          | AND basic_expression basic_expression { $$ = Expression::from(std::move($2), std::move($3), AND_OP); SET_LOCATION($$, @$); }
+          | OR basic_expression basic_expression { $$ = Expression::from(std::move($2), std::move($3), OR_OP); SET_LOCATION($$, @$); }
+          | NOT basic_expression { $$ = Expression::from(std::move($2), NOT_OP); SET_LOCATION($$, @$); }
+          | PLUS basic_expression basic_expression { $$ = Expression::from(std::move($2), std::move($3), ADD_OP); SET_LOCATION($$, @$); }
+          | MULTIPLY basic_expression basic_expression { $$ = Expression::from(std::move($2), std::move($3), MUL_OP); SET_LOCATION($$, @$); }
+          | DIVIDE basic_expression basic_expression { $$ = Expression::from(std::move($2), std::move($3), DIV_OP); SET_LOCATION($$, @$); }
+          | MODULO basic_expression basic_expression { $$ = Expression::from(std::move($2), std::move($3), MOD_OP); SET_LOCATION($$, @$); }
+          | MINUS basic_expression { $$ = Expression::from(std::move($2), NEG_OP); SET_LOCATION($$, @$); }
+          | EQUALS basic_expression basic_expression { $$ = Expression::from(std::move($2), std::move($3), EQS_OP); SET_LOCATION($$, @$); }
+          | NOT_EQUALS basic_expression basic_expression { $$ = Expression::from(std::move($2), std::move($3), NEQ_OP); SET_LOCATION($$, @$); }
+          | GREATER basic_expression basic_expression { $$ = Expression::from(std::move($2), std::move($3), GT_OP); SET_LOCATION($$, @$); }
+          | GREATER_EQUALS basic_expression basic_expression { $$ = Expression::from(std::move($2), std::move($3), GTE_OP); SET_LOCATION($$, @$); }
+          | LESSER basic_expression basic_expression { $$ = Expression::from(std::move($2), std::move($3), LT_OP); SET_LOCATION($$, @$); }
+          | LESSER_EQUALS basic_expression basic_expression { $$ = Expression::from(std::move($2), std::move($3), LTE_OP); SET_LOCATION($$, @$); }
+          | KW_IF expression KW_THEN expression KW_ELSE expression { $$ = Expression::from(std::move($2), std::move($4), std::move($6)); SET_LOCATION($$, @$); }
+          | IDENTIFIER function_call_arguments { ($2).set_function_name($1); SET_LOCATION_VALUE($2, @2); $$ = Expression::from(std::move($2)); SET_LOCATION($$, @$); };
 
 function_call_arguments: basic_expression { $$ = FunctionCall(); ($$).add_argument(std::move($1)); }
                        | basic_expression function_call_arguments { ($2).add_argument(std::move($1)); $$ = std::move($2); };
